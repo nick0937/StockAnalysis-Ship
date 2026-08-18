@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex">
+<meta name="description" content="當日即時投資建議 — 以最新一期日報的買賣區間比對即時報價，只給操作動作">
+<title>當日即時投資建議｜台股航運族群每日個股觀察報告</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1a2230;--ink2:#4a5768;--ink3:#7a8798;--line:#dde3ea;
+ --up:#c62828;--dn:#1b7a3d;--acc:#1f5fa9;--nav:#1b2534;--pad:12px;--r:10px}
+html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
+body{background:var(--bg);color:var(--ink);overflow-wrap:break-word;word-break:break-word;
+ font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--acc);text-decoration:none}
+.hd{background:var(--nav);color:#fff;padding:18px var(--pad) 16px}
+.hdin{max-width:960px;margin:0 auto}
+.hd h1{margin:0 0 5px;font-size:clamp(19px,5.2vw,29px);line-height:1.25}
+.hd p{margin:0;color:#b9c6d6;font-size:clamp(12px,3.3vw,14px)}
+.ph{display:inline-block;border-radius:999px;padding:2px 11px;font-size:11.5px;font-weight:700;margin-right:7px}
+.ph-live{background:var(--up);color:#fff} .ph-close{background:#3d4d66;color:#dbe4ef}
+.ph-off{background:#55617a;color:#e6ecf4}
+.wrap{padding:var(--pad);max-width:960px;margin:0 auto}
+.back{display:inline-flex;align-items:center;min-height:34px;font-size:13px;font-weight:700;margin-bottom:10px}
+.idx{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;margin-bottom:12px;
+ font-variant-numeric:tabular-nums;font-size:14px}
+.idx b{font-size:19px} .idx i{font-style:normal;font-weight:700}
+.up{color:var(--up)} .dn{color:var(--dn)}
+h2.s{margin:16px 0 9px;font-size:clamp(15px,4.2vw,19px);padding-left:9px;border-left:3px solid var(--acc)}
+.alerts{background:#fff6f4;border:1px solid #f0cdc4;border-radius:var(--r);padding:10px 13px;margin-bottom:12px;font-size:13.5px}
+.alerts ul{margin:6px 0 0;padding-left:19px} .alerts li{margin-bottom:3px}
+.alerts .t{display:inline-block;min-width:22px;text-align:center;border-radius:5px;font-size:11px;font-weight:800;
+ padding:0 4px;margin-right:6px;color:#fff}
+.t-買{background:var(--up)} .t-賣{background:var(--dn)} .t-警{background:#b25e00} .t-時{background:#5b4bbd}
+.cards{display:grid;gap:10px}
+.cd{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 13px}
+.cnm{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:7px}
+.cnm b{font-size:17px} .cnm .cd-c{color:var(--ink3);font-size:13px;font-variant-numeric:tabular-nums}
+.sc{margin-left:auto;font-size:12px;color:var(--ink3);font-weight:700}
+.pxr{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;font-variant-numeric:tabular-nums;
+ padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.pxr .p{font-size:25px;font-weight:800;line-height:1.1}
+.pxr .d{font-size:14.5px;font-weight:700}
+.pxr .x{font-size:12px;color:var(--ink3)}
+.act{display:grid;gap:2px 9px;grid-template-columns:44px minmax(0,1fr);margin-bottom:7px}
+.act:last-child{margin-bottom:0}
+.act .k{grid-column:1;font-size:11.5px;font-weight:800;color:#fff;border-radius:6px;text-align:center;
+ align-self:start;padding:3px 0;margin-top:1px}
+.act .k.ke{background:#3d4d66} .act .k.kh{background:#2e6b4f}
+.act .v{grid-column:2;font-size:14.5px;font-weight:800}
+.act .w{grid-column:2;font-size:12.5px;color:var(--ink2);line-height:1.6}
+.act .pv{grid-column:2;font-size:11.5px;color:var(--ink3);margin-bottom:1px}
+.a-buy{color:var(--up)} .a-sell{color:var(--dn)} .a-cut{color:var(--dn)}
+.a-warn{color:#b25e00} .a-wait{color:var(--ink2)} .a-no{color:var(--ink3)} .a-hold{color:var(--acc)}
+.tp{margin-top:7px;padding:6px 9px;background:#f3f0ff;border:1px solid #ded6fb;border-radius:7px;
+ font-size:12px;color:#4b3fa8;line-height:1.6}
+.sim{margin-top:9px;padding:9px 10px;background:#f6f8fb;border:1px dashed #c3cfdf;border-radius:8px}
+.sim .sh{display:flex;flex-wrap:wrap;align-items:baseline;gap:7px;margin-bottom:7px;font-size:11.5px;color:var(--ink3)}
+.sim .sh b{font-size:12.5px;color:var(--ink2)}
+.simrow{display:flex;gap:7px;align-items:center}
+.simrow input{flex:1;min-width:0;max-width:190px;border:1px solid var(--line);border-radius:7px;
+ padding:7px 10px;font-size:16px;font-variant-numeric:tabular-nums;background:#fff;color:var(--ink)}
+.simrow input:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:var(--acc)}
+.simx{border:1px solid var(--line);background:#fff;color:var(--ink3);border-radius:7px;
+ padding:7px 12px;font-size:12.5px;cursor:pointer;min-height:36px}
+.simout{margin-top:7px;line-height:1.65}
+.simstat{font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink2);margin-bottom:3px}
+.simadv{font-size:13.5px;font-weight:800}
+.simadv .sw{display:block;font-weight:400;font-size:12.5px;color:var(--ink2);margin-top:1px}
+.simwarn{margin-top:4px;font-size:12px;color:#b25e00}
+.foot{margin-top:16px;padding:12px 13px;background:#eef1f5;border:1px solid var(--line);border-radius:var(--r);
+ font-size:11.5px;color:var(--ink3);line-height:1.75}
+.foot h3{margin:0 0 4px;font-size:12.5px;color:var(--ink2)}
+.foot p{margin:0 0 7px} .foot p:last-child{margin:0}
+@media(min-width:640px){:root{--pad:16px} .act{grid-template-columns:52px minmax(0,1fr)}}
+@media(min-width:1000px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header class="hd"><div class="hdin">
+<h1>當日即時投資建議</h1>
+<p><span class="ph ph-live">盤中</span>報價時間 08/18 10:36（約 20 分鐘前）　依據 <b>2026-08-17（週一收盤）</b>日報的買賣區間</p>
+</div></header>
+<div class="wrap">
+<a class="back" href="../index.html">← 回首頁</a>
+<div class="idx">加權指數　<b>45,468.31</b>　<i class="dn">-388.96（-0.85%）</i>　<span style="color:var(--ink3)">日報環境分 67</span></div>
+<div class="alerts"><b>需要注意（6 項）</b><ul>
+<li><span class="t t-警">警</span>華航 2610——跌破月線 21.30 元</li>
+<li><span class="t t-買">買</span>長榮航 2618——價格進入買進區間 41.3 – 42.3 元</li>
+<li><span class="t t-警">警</span>長榮航 2618——跌破月線 42.27 元</li>
+<li><span class="t t-警">警</span>星宇航空 2646——跌破月線 21.19 元</li>
+<li><span class="t t-警">警</span>長榮航太 2645——跌破月線 190.38 元</li>
+<li><span class="t t-賣">賣</span>裕民 2606——價格進入停利區間 68.6 – 73.0 元</li>
+</ul></div>
+<h2 class="s">各檔操作動作（依日報綜合分排序）</h2>
+<div class="cards">
+<div class="cd">
+<div class="cnm"><b>萬海</b><span class="cd-c">2615</span><span class="sc">日報 83 分・買進</span></div>
+<div class="pxr"><span class="p up">101.50</span><span class="d up">+1.90（+1.91%）</span><span class="x">高 108.00／低 98.90　量 55,350 張（約當 20 日均量 400%）　站上 6/6 條均線</span></div>
+<div class="act"><span class="k ke">空手</span><span class="pv">日報建議：○ 等回檔再買</span><span class="v a-wait">偏貴，等回到 86.5 – 90.4 元</span><span class="w">距區間上緣 90.40 元還有 +12.3%（月線 86.48 ～ 5 日線 90.38）。</span></div>
+<div class="act"><span class="k kh">持有</span><span class="pv">日報建議：✓ 續抱並設停利</span><span class="v a-hold">續抱，未觸發任何條件</span><span class="w">停利區間在 移動停利（不設固定上緣）（收盤 99.60 即 52 週新高，上方無前波壓力可錨定，故改用均線移動停利）；跌破 5 日線 90.38 元先縮手。<b>跌破 5 日線 90.38 元減 1/2；跌破 10 日線 88.01 元全出</b>；另若單日出現「量比 >3 且收盤跌破當日開盤」的長黑，不待均線先減 1/2。SCFI 連兩週下跌或美西線轉跌為提前減碼訊號</span></div>
+<div class="sim" data-c="2615" data-px="101.5" data-sz0="" data-sz1="" data-ma5="90.38" data-ma20="86.485" data-hk="h-tp" data-slab="停利區間" data-szone="移動停利（不設固定上緣）"><div class="sh"><b>💰 成本模擬</b><span>輸入你的每股成本，看對「你的部位」的模擬建議（不改變上方日報建議）</span></div><div class="simrow"><input type="number" inputmode="decimal" step="any" min="0" placeholder="每股成本（元）" aria-label="萬海 持有成本"><button type="button" class="simx">清除</button></div><div class="simout" hidden></div></div>
+</div>
+<div class="cd">
+<div class="cnm"><b>長榮</b><span class="cd-c">2603</span><span class="sc">日報 79 分・買進</span></div>
+<div class="pxr"><span class="p up">237.00</span><span class="d up">+5.50（+2.38%）</span><span class="x">高 242.00／低 231.00　量 20,906 張（約當 20 日均量 206%）　站上 6/6 條均線</span></div>
+<div class="act"><span class="k ke">空手</span><span class="pv">日報建議：○ 等回檔再買</span><span class="v a-wait">偏貴，等回到 208.6 – 219.7 元</span><span class="w">距區間上緣 219.70 元還有 +7.9%（月線 208.55 ～ 5 日線 219.70）。</span></div>
+<div class="act"><span class="k kh">持有</span><span class="pv">日報建議：✓ 續抱並設停利</span><span class="v a-hold">續抱，未觸發任何條件</span><span class="w">停利區間在 242.5 – 250.0 元（52 週高 242.50 ～ 前波整數關卡 250.00（布林上軌 223.89 已於 8/17 收盤突破，改以前波高為上緣））；跌破 5 日線 219.70 元先縮手。<b>移動停利</b>：跌破 5 日線 219.70 元減 1/3；跌破 10 日線 213.50 元再減 1/3；跌破月線 208.55 元且外資轉連續賣超則全出。另若 SCFI 由 3,355.24 點轉為連兩週下跌，不待價位先減 1/3</span></div>
+<div class="sim" data-c="2603" data-px="237" data-sz0="242.5" data-sz1="250" data-ma5="219.7" data-ma20="208.55" data-hk="h-tp" data-slab="停利區間" data-szone="242.5 – 250.0 元"><div class="sh"><b>💰 成本模擬</b><span>輸入你的每股成本，看對「你的部位」的模擬建議（不改變上方日報建議）</span></div><div class="simrow"><input type="number" inputmode="decimal" step="any" min="0" placeholder="每股成本（元）" aria-label="長榮 持有成本"><button type="button" class="simx">清除</button></div><div class="simout" hidden></div></div>
+</div>
+<div class="cd">
+<div class="cnm"><b>慧洋-KY</b><span class="cd-c">2637</span><span class="sc">日報 74 分・買進</span></div>
+<div class="pxr"><span class="p up">88.00</span><span class="d up">+1.00（+1.15%）</span><span class="x">高 88.80／低 86.90　量 1,595 張（約當 20 日均量 68%）　站上 6/6 條均線</span></div>
+<div class="act"><span class="k ke">空手</span><span class="pv">日報建議：◐ 分批買進</span><span class="v a-wait">偏貴，等回到 83.9 – 86.6 元</span><span class="w">距區間上緣 86.60 元還有 +1.6%（月線 83.89 ～ 5 日線 86.64（10 日線 86.40 同區））。</span></div>
+<div class="act"><span class="k kh">持有</span><span class="pv">日報建議：✓ 續抱</span><span class="v a-hold">續抱，未觸發任何條件</span><span class="w">停利區間在 88.8 – 89.9 元（52 週高 88.80 ～ 布林上軌 89.90）；跌破 5 日線 86.64 元先縮手。持有者續抱：<b>觸及 88.8~89.9 元且量能未同步放大即先減 1/3</b>；跌破 10 日線 86.40 元減 1/3；跌破月線 83.89 元全出。⚠ 本檔最新季財報仍為 2026Q1（Q2 為自結推算），正式 Q2 數字公布若低於推算需重新評估</span></div>
+<div class="sim" data-c="2637" data-px="88" data-sz0="88.8" data-sz1="89.9" data-ma5="86.64" data-ma20="83.89" data-hk="h-keep" data-slab="停利區間" data-szone="88.8 – 89.9 元"><div class="sh"><b>💰 成本模擬</b><span>輸入你的每股成本，看對「你的部位」的模擬建議（不改變上方日報建議）</span></div><div class="simrow"><input type="number" inputmode="decimal" step="any" min="0" placeholder="每股成本（元）" aria-label="慧洋-KY 持有成本"><button type="button" class="simx">清除</button></div><div class="simout" hidden></div></div>
+</div>
+<div class="cd">
+<div class="cnm"><b>裕民</b><span class="cd-c">2606</span><span class="sc">日報 73 分・買進</span></div>
+<div class="pxr"><span class="p up">68.90</span><span class="d up">+0.60（+0.88%）</span><span class="x">高 69.90／低 68.00　量 3,351 張（約當 20 日均量 86%）　站上 6/6 條均線</span></div>
+<div class="act"><span class="k ke">空手</span><span class="pv">日報建議：◐ 分批買進</span><span class="v a-wait">偏貴，等回到 64.4 – 66.8 元</span><span class="w">距區間上緣 66.80 元還有 +3.1%（月線 64.37 ～ 5 日線 66.78（季線 64.76 亦在下緣附近））。</span></div>
+<div class="act"><span class="k kh">持有</span><span class="pv">日報建議：✓ 續抱並設停利</span><span class="v a-sell">已進入停利區間，依原訂條件執行</span><span class="w">停利區間 68.6 – 73.0 元（布林上軌 68.59 ～ 52 週高 73.00）。持有者：<b>觸及布林上軌 68.59 元先減 1/3（8/17 收 68.30 已幾乎觸及）</b>；跌破 5 日線 66.78 元再減 1/3；跌破月線 64.37 元與季線 64.76 元同時失守則全出。另 2026 新船交付造成的運力增加為中期供給變數，BDI 若跌破 2,900 點提前減碼</span></div>
+<div class="sim" data-c="2606" data-px="68.9" data-sz0="68.6" data-sz1="73" data-ma5="66.78" data-ma20="64.365" data-hk="h-tp" data-slab="停利區間" data-szone="68.6 – 73.0 元"><div class="sh"><b>💰 成本模擬</b><span>輸入你的每股成本，看對「你的部位」的模擬建議（不改變上方日報建議）</span></div><div class="simrow"><input type="number" inputmode="decimal" step="any" min="0" placeholder="每股成本（元）" aria-label="裕民 持有成本"><button type="button" class="simx">清除</button></div><div class="simout" hidden></div></div>
+</div>
+<div class="cd">
+<div class="cnm"><b>陽明</b><span class="cd-c">2609</span><span class="sc">日報 72 分・買進</span></div>
+<div class="pxr"><span class="p up">55.80</span><span class="d up">+1.10（+2.01%）</span><span class="x">高 57.20／低 54.60　量 63,046 張（約當 20 日均量 305%）　站上 6/6 條均線</span></div>
+<div class="act"><span class="k ke">空手</span><span class="pv">日報建議：○ 等回檔再買</span><span class="v a-wait">偏貴，等回到 51.2 – 52.3 元</span><span class="w">距區間上緣 52.30 元還有 +6.7%（月線 51.16 ～ 5 日線 52.28（月線、季線 51.46、10 日線 51.55 三線糾結於 51.2~51.6，為支撐密集帶））。</span></div>
+<div class="act"><span class="k kh">持有</span><span class="pv">日報建議：✓ 續抱並設停利</span><span class="v a-hold">續抱，未觸發任何條件</span><span class="w">停利區間在 60.0 – 69.9 元（前波整數關卡 60.00 ～ 52 週高 69.90（布林上軌 53.11 已於 8/17 遠幅突破，不再適用為上緣））；跌破 5 日線 52.28 元先縮手。<b>移動停利</b>：跌破 5 日線 52.28 元減 1/3；跌破月線 51.16 元（同時失守季線 51.46）全出。<b>投信在大戶欄的持股已由 7.22% 降至 0.30% 幾近出清，反彈中若外資也轉賣超即不留倉</b></span></div>
+<div class="sim" data-c="2609" data-px="55.8" data-sz0="60" data-sz1="69.9" data-ma5="52.28" data-ma20="51.165" data-hk="h-tp" data-slab="停利區間" data-szone="60.0 – 69.9 元"><div class="sh"><b>💰 成本模擬</b><span>輸入你的每股成本，看對「你的部位」的模擬建議（不改變上方日報建議）</span></div><div class="simrow"><input type="number" inputmode="decimal" step="any" min="0" placeholder="每股成本（元）" aria-label="陽明 持有成本"><button type="button" class="simx">清除</button></div><div class="simout" hidden></div></div>
+</div>
+<div class="cd">
+<div class="cnm"><b>長榮航</b><span class="cd-c">2618</span><span class="sc">日報 61 分・觀察偏多</span></div>
+<div class="pxr"><span class="p dn">41.70</span><span class="d dn">-0.10（-0.24%）</span><span class="x">高 42.30／低 41.40　量 16,135 張（約當 20 日均量 38%）　站上 4/6 條均線</span></div>
+<div class="act"><span class="k ke">空手</span><span class="pv">日報建議：◐ 分批買進</span><span class="v a-buy">已進入買進區間，可分批買進</span><span class="w">買進區間 41.3 – 42.3 元（5 日線 41.32 ～ 月線 42.27（中間有 10 日線 42.45 需一併收復））。仍須確認：<b>8/17 已站回 5 日線 41.32（收 41.80、+4.76%）、K 值 33.12 自低位翻揚，可先分批 1/3</b>；帶量站上 10 日線 42.45 與月線 42.27 再加碼至滿倉。⚠ 加碼前須確認法人回到買超——10 日雖 +44,535 張，但<b>近 4 日已轉為 −5,882 張</b>；跌破布林下軌 39.95 元則放棄本次進場</span></div>
+<div class="act"><span class="k kh">持有</span><span class="pv">日報建議：✓ 續抱</span><span class="v a-cut">跌破月線 42.27 元，加快停利</span><span class="w">月線為中期多空分界，已在其下；不必等回到停利區間。原訂條件：持有者續抱：<b>跌破 5 日線 41.32 元減 1/3；跌破布林下軌 39.95 元全出</b>。另<b>券資比已由 1.48% 倍增至 2.96%、融資 10 日減 7,631 張</b>，若券資比續升破 4% 需提高警覺</span></div>
+<div class="sim" data-c="2618" data-px="41.7" data-sz0="44.6" data-sz1="45.7" data-ma5="41.32" data-ma20="42.2675" data-hk="h-keep" data-slab="停利區間" data-szone="44.6 – 45.7 元"><div class="sh"><b>💰 成本模擬</b><span>輸入你的每股成本，看對「你的部位」的模擬建議（不改變上方日報建議）</span></div><div class="simrow"><input type="number" inputmode="decimal" step="any" min="0" placeholder="每股成本（元）" aria-label="長榮航 持有成本"><button type="button" class="simx">清除</button></div><div class="simout" hidden></div></div>
+</div>
+<div class="cd">
+<div class="cnm"><b>台灣虎航</b><span class="cd-c">6757</span><span class="sc">日報 52 分・觀察</span></div>
+<div class="pxr"><span class="p up">56.20</span><span class="d up">+0.20（+0.36%）</span><span class="x">高 56.60／低 56.00　量 669 張（約當 20 日均量 42%）　站上 4/6 條均線</span></div>
+<div class="act"><span class="k ke">空手</span><span class="pv">日報建議：✕ 不建議買進</span><span class="v a-no">不宜買進</span><span class="w">日報未設買點（PB 3.27 倍為航空四檔最貴，且大戶（400 張以上）13 週 −2.35pp 為 10 檔中唯一中期流失者）。重新評估門檻：<b>兩項同時成立再評估</b>：帶量站上季線 57.28 元（8/17 收 56.00）、且 Q3 營益率由 8.94% 回升至 12% 以上（油價回落的實質受益證據）。⚠ 成交量僅 1,053 張（8/17），流動性風險使停損難以執行，部位規模須自我限制</span></div>
+<div class="act"><span class="k kh">持有</span><span class="pv">日報建議：✓ 續抱並設停利</span><span class="v a-hold">續抱，未觸發任何條件</span><span class="w">減碼區間在 57.3 – 58.1 元（季線 57.28 ～ 布林上軌 58.09）；跌破 5 日線 55.40 元先縮手。持有者：<b>反彈至 57.3~58.1 元且無法帶量突破即減 1/3</b>；跌破月線 55.94 元與 5 日線 55.40 元同時失守則減至半倉；跌破布林下軌 53.78 元全出</span></div>
+<div class="sim" data-c="6757" data-px="56.2" data-sz0="57.3" data-sz1="58.1" data-ma5="55.4" data-ma20="55.935" data-hk="h-tp" data-slab="減碼區間" data-szone="57.3 – 58.1 元"><div class="sh"><b>💰 成本模擬</b><span>輸入你的每股成本，看對「你的部位」的模擬建議（不改變上方日報建議）</span></div><div class="simrow"><input type="number" inputmode="decimal" step="any" min="0" placeholder="每股成本（元）" aria-label="台灣虎航 持有成本"><button type="button" class="simx">清除</button></div><div class="simout" hidden></div></div>
+</div>
+<div class="cd">
+<div class="cnm"><b>華航</b><span class="cd-c">2610</span><span class="sc">日報 47 分・觀察</span></div>
+<div class="pxr"><span class="p dn">20.15</span><span class="d dn">-0.10（-0.49%）</span><span class="x">高 20.30／低 20.00　量 9,223 張（約當 20 日均量 20%）　站上 2/6 條均線</span></div>
+<div class="act"><span class="k ke">空手</span><span class="pv">日報建議：✕ 不建議買進</span><span class="v a-no">不宜買進</span><span class="w">日報未設買點（僅站上 3/6 條均線，且流動比 66.8%（流動負債 1,327 億 > 流動資產 887 億）為財務警訊）。重新評估門檻：<b>三條件至少滿足兩項再評估</b>：(1) Q3 三率回升、營益率由 4.18% 回到 8% 以上；(2) 外資 10 日賣超（現為 −125,401 張）轉為連續買超；(3) 帶量站回月線 21.30 元與季線 21.12 元之上。K 值 13.93 的超賣不構成買進理由</span></div>
+<div class="act"><span class="k kh">持有</span><span class="pv">日報建議：▼ 逢反彈減碼</span><span class="v a-cut">跌破月線 21.30 元，加快減碼</span><span class="w">月線為中期多空分界，已在其下；不必等回到減碼區間。原訂條件：<b>反彈至均線密集帶 21.1~21.3 元即分批減碼</b>（8/17 收 20.25、量比 0.54 為跌後量縮，非止跌）；跌破 8/17 低點 19.90 元與布林下軌 19.47 元則不計價位出場</span></div>
+<div class="sim" data-c="2610" data-px="20.15" data-sz0="21.1" data-sz1="21.3" data-ma5="20.15" data-ma20="21.3025" data-hk="h-cut" data-slab="減碼區間" data-szone="21.1 – 21.3 元"><div class="sh"><b>💰 成本模擬</b><span>輸入你的每股成本，看對「你的部位」的模擬建議（不改變上方日報建議）</span></div><div class="simrow"><input type="number" inputmode="decimal" step="any" min="0" placeholder="每股成本（元）" aria-label="華航 持有成本"><button type="button" class="simx">清除</button></div><div class="simout" hidden></div></div>
+</div>
+<div class="cd">
+<div class="cnm"><b>長榮航太</b><span class="cd-c">2645</span><span class="sc">日報 46 分・觀察</span></div>
+<div class="pxr"><span class="p dn">178.00</span><span class="d dn">-4.00（-2.20%）</span><span class="x">高 184.00／低 177.00　量 3,451 張（約當 20 日均量 80%）　站上 2/6 條均線</span></div>
+<div class="act"><span class="k ke">空手</span><span class="pv">日報建議：✕ 不建議買進</span><span class="v a-no">不宜買進</span><span class="w">日報未設買點（8/17 放量下跌 9.00%（量比 2.64）跌破 5/10/月/季四條均線，僅站上 2/6；PE 23.2、PB 5.08 全組最貴）。重新評估門檻：<b>需先確認 8/14 漲停的追高融資被消化</b>：融資餘額由 08/13 的 3,115 張暴增至 08/14 的 4,880 張（+56.7%），須回落至 3,500 張以下且法人 10 日賣超（現 −10,961 張、買超僅 1/10 日）轉正；技術面需帶量站回月線 190.38 元。軍工題材本身不構成此價位的買進理由</span></div>
+<div class="act"><span class="k kh">持有</span><span class="pv">日報建議：▼ 逢反彈減碼</span><span class="v a-cut">跌破月線 190.38 元，加快減碼</span><span class="w">月線為中期多空分界，已在其下；不必等回到減碼區間。原訂條件：<b>反彈至 187.4~190.4 元的均線密集帶即分批減碼</b>；跌破 8/17 低點 181.50 元續弱則加快處理，跌破布林下軌 173.09 元與 MA120 173.72 元全出</span></div>
+<div class="sim" data-c="2645" data-px="178" data-sz0="187.4" data-sz1="190.4" data-ma5="187.4" data-ma20="190.375" data-hk="h-cut" data-slab="減碼區間" data-szone="187.4 – 190.4 元"><div class="sh"><b>💰 成本模擬</b><span>輸入你的每股成本，看對「你的部位」的模擬建議（不改變上方日報建議）</span></div><div class="simrow"><input type="number" inputmode="decimal" step="any" min="0" placeholder="每股成本（元）" aria-label="長榮航太 持有成本"><button type="button" class="simx">清除</button></div><div class="simout" hidden></div></div>
+</div>
+<div class="cd">
+<div class="cnm"><b>星宇航空</b><span class="cd-c">2646</span><span class="sc">日報 40 分・減碼／賣出</span></div>
+<div class="pxr"><span class="p up">20.85</span><span class="d up">+0.10（+0.48%）</span><span class="x">高 20.90／低 20.70　量 3,255 張（約當 20 日均量 56%）　站上 2/6 條均線</span></div>
+<div class="act"><span class="k ke">空手</span><span class="pv">日報建議：✕ 不建議買進</span><span class="v a-no">不宜買進</span><span class="w">日報未設買點（僅站上 1/6 條均線；且 Q2 營益率 −5.68%、淨利率 −8.49%、近四季 CFO÷淨利 −11.80 為本業虧損）。重新評估門檻：<b>需先看到單季轉盈</b>（營益率回正）且負債比由 80.06% 降至 75% 以下、流動比回到 100% 以上；營收創高（7 月 +42.79%）不足以構成買進理由——營收成長並未轉化為獲利</span></div>
+<div class="act"><span class="k kh">持有</span><span class="pv">日報建議：✕ 近期出場</span><span class="v a-cut">跌破月線 21.19 元，加快出場</span><span class="w">月線為中期多空分界，已在其下；不必等回到出場區間。原訂條件：<b>反彈至 20.9~21.2 元即分批出場</b>；跌破布林下軌 20.30 元或 52 週低 19.70 元不計價位出清。油價（航空燃油年增 124%）未回落前，任何反彈都視為出場機會而非買點</span></div>
+<div class="sim" data-c="2646" data-px="20.85" data-sz0="20.9" data-sz1="21.2" data-ma5="20.57" data-ma20="21.1875" data-hk="h-exit" data-slab="出場區間" data-szone="20.9 – 21.2 元"><div class="sh"><b>💰 成本模擬</b><span>輸入你的每股成本，看對「你的部位」的模擬建議（不改變上方日報建議）</span></div><div class="simrow"><input type="number" inputmode="decimal" step="any" min="0" placeholder="每股成本（元）" aria-label="星宇航空 持有成本"><button type="button" class="simx">清除</button></div><div class="simout" hidden></div></div>
+</div>
+</div>
+<div class="foot"><h3>這頁在做什麼</h3><p>把 <b>2026-08-17 日報</b>訂下的買賣區間與條件，拿去比對<b>當下的報價</b>，只輸出「現在該做什麼」。均線、布林通道、20 日均量等技術位一律沿用日報基準日的收盤計算值，<b>不用盤中未完成的 K 棒重算</b>；頁面上只有價格、漲跌、成交量是即時的。判斷邏輯固定：價格落在買進區間內＝可分批買、高於區間＝等回檔、跌破區間下緣＝支撐失守先別接；持有則依序檢查是否進入停利／減碼／出場區間、是否跌破月線、是否跌破 5 日線。</p><h3>成本模擬怎麼算</h3><p>各卡片的「成本模擬」只在你的瀏覽器內計算（輸入值存在本機瀏覽器，頁面重新產生後仍保留，不會上傳）。報酬率＝現價÷成本−1；每張帳面損益＝（現價−成本）×1,000，未含費用；損益兩平價＝成本×1.00585（買賣手續費各 0.1425% 加證交稅 0.3%）。模擬規則：日報已判「減碼／出場」者不因成本高低翻案；獲利且已進停利區＝分批停利、獲利達 15% 可提前部分停利、虧損 5% 進入警戒、虧損 10% 觸及停損紀律（並以月線為最後防線）。此為規則式試算，非投資建議。</p><h3>報價來源與延遲</h3><p>Yahoo Finance 即時報價（2026-08-18 10:36），台股報價通常有數分鐘至 15 分鐘延遲，成交量為當日累計。本頁每次執行都會整份覆蓋，不保留歷史。</p><h3>免責聲明</h3><p>本頁由自動化流程產生，僅供研究與教育參考，不構成投資建議、要約或招攬，亦不保證資料之完整性、即時性與正確性。實際下單前請自行以券商報價複核價格，投資有風險，讀者應自行判斷並承擔所有投資決策之後果。</p></div>
+</div>
+<p style="text-align:center;color:#7a8798;font-size:11.5px;margin:14px 0 20px">產生時間 2026-08-18 10:56（台北時間）</p>
+<script>
+(function(){
+"use strict";
+var FEE=1.00585; // 買賣手續費各 0.1425% ＋ 證交稅 0.3%
+function n1(x){return (x>=0?"+":"")+x.toFixed(1);}
+function f2(x){return x.toLocaleString("zh-Hant-TW",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function money(x){return (x>=0?"+":"-")+Math.abs(Math.round(x)).toLocaleString("zh-Hant-TW");}
+function kls(x){return x>0?"up":(x<0?"dn":"");}
+function advise(d,cost,px){
+  var ret=(px/cost-1)*100, be=cost*FEE;
+  var ma5=parseFloat(d.ma5)||null, ma20=parseFloat(d.ma20)||null;
+  var sz0=d.sz0?parseFloat(d.sz0):null, slab=d.slab, szone=d.szone;
+  var dist=(sz0&&px<sz0)?("距"+slab+"下緣 "+f2(sz0)+" 元還有 "+n1((sz0/px-1)*100)+"%。"):"";
+  var cls,act,why;
+  if(d.hk==="h-exit"||d.hk==="h-cut"){
+    var verb=d.hk==="h-exit"?"出場":"減碼";
+    if(ret>=0){cls="a-sell";act="尚有獲利 "+n1(ret)+"%，趁獲利依日報建議"+verb;
+      why="日報結論已是「"+verb+"」，持有成本再低也不改變趨勢轉弱的判斷；趁還有獲利執行，優於之後被迫停損。";}
+    else{cls="a-cut";act="已虧損 "+n1(ret)+"%，仍應依日報建議"+verb+"，別等回本";
+      why="損益兩平價 "+f2(be)+" 元只是你的成本記號，不是技術支撐；"+verb+"的理由與你的成本無關，凹單只會擴大虧損。";}
+  }else if(sz0!==null&&px>=sz0){
+    if(ret>0){cls="a-sell";act="已進"+slab+"且獲利 "+n1(ret)+"%，分批停利";
+      why="價格已在 "+szone+" 內，獲利入袋優先；其餘部位依原訂移動停利條件。";}
+    else{cls="a-warn";act="價格已到"+slab+"，但你仍虧損 "+n1(ret)+"%——視為減損出場機會";
+      why="成本比"+slab+"還高，別為了回本而凹單；依原訂條件處理"+(ma5?"，跌破 5 日線 "+f2(ma5)+" 元先減碼":"")+"。";}
+  }else if(ret<=-10){
+    if(ma20&&px<ma20){cls="a-cut";act="虧損 "+n1(ret)+"% 且已破月線，建議分批停損";
+      why="虧損超過 10% 停損紀律，月線 "+f2(ma20)+" 元也已失守；攤平或等反彈只會擴大風險。";}
+    else{cls="a-cut";act="虧損 "+n1(ret)+"% 已觸停損紀律，月線失守即出";
+      why="一般停損紀律為 -10%"+(ma20?"；月線 "+f2(ma20)+" 元是最後防線，跌破不要再等":"")+"。";}
+  }else if(ret<=-5){
+    cls="a-warn";act="虧損 "+n1(ret)+"%，進入警戒區";
+    why=(ma20?"先守月線 "+f2(ma20)+" 元；":"")+"虧損擴大到 10% 就應執行停損，別讓小虧變大虧。"+dist;
+  }else if(ret<0){
+    cls="a-hold";act="小幅虧損 "+n1(ret)+"%，依上方原建議操作";
+    why="損益兩平價約 "+f2(be)+" 元（含費）。"+dist;
+  }else if(ret<5){
+    cls="a-hold";act="小幅獲利 "+n1(ret)+"%，續抱等"+slab;
+    why="可把防守價設在損益兩平 "+f2(be)+" 元附近，避免由盈轉虧。"+dist;
+  }else if(ret<15){
+    cls="a-hold";act="獲利 "+n1(ret)+"%，續抱等"+slab+"，防守價上移";
+    why="防守價可上移到 "+f2(Math.max(ma5||0,be))+" 元（5 日線與損益兩平取高者），鎖住既有獲利。"+dist;
+  }else{
+    cls="a-sell";act="獲利已達 "+n1(ret)+"%，可先分批停利，不必等"+slab;
+    why="雖未進 "+szone+"，但保護獲利優先——先出一部分，其餘依原訂移動停利條件。"+dist;
+  }
+  return {ret:ret,be:be,cls:cls,act:act,why:why};
+}
+document.querySelectorAll(".sim").forEach(function(el){
+  var d=el.dataset, inp=el.querySelector("input"), out=el.querySelector(".simout"),
+      clr=el.querySelector(".simx"), key="livecost:"+d.c, px=parseFloat(d.px);
+  function render(){
+    var cost=parseFloat(inp.value);
+    if(!(cost>0)||!(px>0)){out.hidden=true;try{localStorage.removeItem(key);}catch(e){}return;}
+    try{localStorage.setItem(key,inp.value);}catch(e){}
+    var r=advise(d,cost,px), pl=(px-cost)*1000;
+    var html='<div class="simstat">報酬率 <b class="'+kls(r.ret)+'">'+n1(r.ret)+'%</b>　'
+      +'每張帳面損益 <b class="'+kls(pl)+'">'+money(pl)+' 元</b>　'
+      +'含費損益兩平 '+f2(r.be)+' 元</div>'
+      +'<div class="simadv '+r.cls+'">'+r.act+'<span class="sw">'+r.why+'</span></div>';
+    if(cost>px*4||cost<px/4)html+='<div class="simwarn">⚠ 成本與現價差距超過 4 倍，'
+      +'請確認是否輸入錯誤（例如把總金額當成每股成本）。</div>';
+    out.innerHTML=html;out.hidden=false;
+  }
+  inp.addEventListener("input",render);
+  clr.addEventListener("click",function(){inp.value="";render();});
+  try{var s=localStorage.getItem(key);if(s){inp.value=s;render();}}catch(e){}
+});
+})();
+</script>
+</body>
+</html>
