@@ -104,7 +104,8 @@ foot = old[old.find('<div class="foot">'):]
 lv_p = os.path.join(D, "live_meta.json")
 if os.path.exists(lv_p):
     lv = json.load(open(lv_p, encoding="utf-8"))
-    lv_lab = "%s · %s" % (lv.get("phase", ""), lv.get("quote_time", "")[-5:])
+    _qt = (lv.get("quote_time", "").split(" ") + [""])[1][:5]
+    lv_lab = "%s · %s" % (lv.get("phase", ""), _qt)
 else:
     lv_lab = "尚未產生"
 

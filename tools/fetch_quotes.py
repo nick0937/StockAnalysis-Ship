@@ -48,6 +48,58 @@ for s in syms:
             if c is not None]
     print("%-12s OK  %4d 筆  最後收盤 %.2f" % (s, len(rows), rows[-1][1]))
 
+# ── ★ 補回 Yahoo 大盤序列的缺洞（證交所 TAIEX 官方 OHLC）────────────
+# 2026-08-18 踩到：Yahoo 的 ^TWII 在 2026-08-17 整根 K 棒為 null（open/high/low/close
+# 全空），calc_indicators.py 會把該日丟掉，於是「前一日收盤」誤用 8/14 的值，
+# 大盤漲跌、均線、KD、MACD 連同各檔相對強弱全部失真。個股序列未受影響。
+# 對策：用證交所 MI_5MINS_HIST（官方加權指數日 OHLC）逐月補回缺漏日。
+def patch_index_gaps():
+    fp = os.path.join(OUT, C.INDEX_SYM.replace("^", "IDX_") + ".json")
+    if not os.path.exists(fp):
+        return
+    j = json.loads(open(fp, encoding="utf-8").read())
+    r = j["chart"]["result"][0]
+    q = r["indicators"]["quote"][0]
+    ts = r["timestamp"]
+    import datetime
+    holes = {}
+    for n, t in enumerate(ts):
+        if q["close"][n] is None:
+            holes[datetime.datetime.fromtimestamp(t).strftime("%Y-%m-%d")] = n
+    if not holes:
+        print("\n大盤序列無缺漏日")
+        return
+    print("\n★ Yahoo %s 有 %d 個缺漏日：%s → 用證交所官方 OHLC 補值"
+          % (C.INDEX_SYM, len(holes), "、".join(sorted(holes))))
+    months = sorted({d[:7].replace("-", "") + "01" for d in holes})
+    off = {}
+    for ym_ in months:
+        try:
+            d = json.loads(get("https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST"
+                               "?date=%s&response=json" % ym_))
+            for row in d.get("data", []):
+                roc = row[0].split("/")
+                ad = "%d-%s-%s" % (int(roc[0]) + 1911, roc[1], roc[2])
+                off[ad] = [float(x.replace(",", "")) for x in row[1:5]]
+        except Exception as e:
+            print("   TAIEX %s FAIL：%s" % (ym_, e))
+    fixed, missed = [], []
+    for d, n in sorted(holes.items()):
+        if d in off:
+            o, h, l, c = off[d]
+            q["open"][n], q["high"][n], q["low"][n], q["close"][n] = o, h, l, c
+            fixed.append("%s 收 %.2f" % (d, c))
+        else:
+            missed.append(d)
+    if fixed:
+        open(fp, "w", encoding="utf-8").write(json.dumps(j, ensure_ascii=False))
+        print("   已補：" + "、".join(fixed))
+    if missed:
+        print("   ★ 仍缺（證交所也查無，可能是休市日）：" + "、".join(missed))
+
+
+patch_index_gaps()
+
 # ── 大盤成交金額與股數（證交所 FMTQIK，官方、有整月歷史）──
 ym = C.BASE_DATE[:7].replace("-", "") + "01"
 try:
