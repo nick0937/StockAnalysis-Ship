@@ -71,7 +71,7 @@ cd tools
 python build_live.py         # 盤中想看就跑，每次整份覆蓋 REPO/live/index.html
 ```
 
-- **只有價格、漲跌、成交量是即時的**（Yahoo，約延遲數分鐘～15 分鐘）。均線、布林、20 日均量、五面向評分一律沿用 `data/indicators.json` 與 `inputs/` 的基準日值，**不用盤中未完成 K 棒重算**。
+- **只有價格、漲跌、成交量是即時的**。取價順序：鉅亨（真實成交價，約 1 分鐘）→ 交易所 MIS（約 10 秒，大盤指數用此源）→ Yahoo（**延遲 20 分鐘**，僅備援）。均線、布林、20 日均量、五面向評分一律沿用 `data/indicators.json` 與 `inputs/` 的基準日值，**不用盤中未完成 K 棒重算**。
 - 輸出只有操作動作：空手該不該買／買在哪個區間、持有該不該抱／賣在哪個區間，來源是 `inputs/zones.py` 的買賣區間與 `inputs/scores.py` 的 `ADV` 標籤。
 - **不需要更新任何 `inputs/`**——這支只讀不寫，日報跑完就一直有效，隔天跑完新日報自動換基準。
 - 首頁的入口按鈕由 `finalize.py` 產生，時間戳由 `build_live.py` 就地更新（`<span class="lvt">`）。**第一次啟用要先跑一次 `finalize.py` 才會出現按鈕。**

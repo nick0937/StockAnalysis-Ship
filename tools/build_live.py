@@ -60,19 +60,146 @@ def num(m, *keys):
     return None
 
 
+def _get(url, headers, tries=3, timeout=20):
+    last = None
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read())
+        except Exception as e:
+            last = e
+            time.sleep(1.0 * (i + 1))
+    raise last
+
+
+def _f(x):
+    """MIS 的數字欄位是字串，無值時為 '-' 或 None。"""
+    try:
+        v = float(x)
+        return v if v > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+# 個股即時：鉅亨（真實成交價，落後約 1 分鐘）→ 回傳 Yahoo 形狀的 meta
+def cnyes_quotes(codes):
+    url = ("https://ws.api.cnyes.com/ws/api/v1/quote/quotes/"
+           + ",".join("TWS:%s:STOCK" % c for c in codes))
+    hdr = {"User-Agent": UA, "Accept": "*/*",
+           "Origin": "https://www.cnyes.com", "Referer": "https://www.cnyes.com/"}
+    out = {}
+    rows = None
+    for attempt in (1, 2):                      # 連續呼叫會靜默回空（非例外），重試一次
+        try:
+            rows = (_get(url, hdr).get("data") or [])
+        except Exception as e:
+            print("    ★ 鉅亨取價失敗：%s" % e)
+            return out
+        if rows:
+            break
+        if attempt == 1:
+            print("    · 鉅亨回應無資料（疑似頻率限制），2 秒後重試")
+            time.sleep(2)
+    if not rows:
+        print("    ★ 鉅亨連續兩次回應無資料，改用交易所 MIS")
+        return out
+    for d in rows:
+        c = str(d.get("200010") or "")
+        px = d.get("6")
+        if c not in codes or not isinstance(px, (int, float)):
+            continue
+        vol = d.get("200013") or d.get("800001")
+        try:
+            vol = float(vol) * 1000            # 張 → 股（對齊 Yahoo 單位）
+        except (TypeError, ValueError):
+            vol = None
+        out[c] = {"regularMarketPrice": float(px),
+                  "previousClose": _f(d.get("21")),
+                  "regularMarketDayHigh": _f(d.get("12")),
+                  "regularMarketDayLow": _f(d.get("13")),
+                  "regularMarketVolume": vol,
+                  "regularMarketTime": int(d.get("200007") or 0),
+                  "_src": "cnyes"}
+    miss = [c for c in codes if c not in out]
+    if miss:
+        print("    · 鉅亨缺 %d 檔（%s），改由交易所 MIS 補" % (len(miss), "、".join(miss)))
+    return out
+
+
+# 交易所 MIS 揭示（約 10 秒）：指數用它；個股成交價欄 z 多半無值，退回五檔中價
+def mis_quotes(codes, want_index=True):
+    ch = "|".join("tse_%s.tw" % c for c in codes)
+    if want_index:
+        ch += ("|" if ch else "") + "tse_t00.tw"
+    url = ("https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=%s&json=1&delay=0" % ch)
+    hdr = {"User-Agent": UA, "Accept": "*/*",
+           "Referer": "https://mis.twse.com.tw/stock/fibest.jsp"}
+    out = {}
+    try:
+        j = _get(url, hdr)
+    except Exception as e:
+        print("    ★ 交易所 MIS 取價失敗：%s" % e)
+        return out
+    if str(j.get("rtcode")) != "0000":
+        print("    ★ 交易所 MIS 回應碼異常：%s" % j.get("rtcode"))
+        return out
+    for d in (j.get("msgArray") or []):
+        c = str(d.get("c") or "")
+        px, how = _f(d.get("z")), "成交"
+        if px is None:                          # z 只在該次快照剛好撮合時才有值
+            b = _f((str(d.get("b") or "").split("_") or [""])[0])
+            a = _f((str(d.get("a") or "").split("_") or [""])[0])
+            if b and a:
+                px, how = round((b + a) / 2, 2), "五檔中價"
+            elif b or a:
+                px, how = (b or a), "五檔"
+        if px is None:
+            continue
+        v = _f(d.get("v"))
+        out[c] = {"regularMarketPrice": px,
+                  "previousClose": _f(d.get("y")),
+                  "regularMarketDayHigh": _f(d.get("h")),
+                  "regularMarketDayLow": _f(d.get("l")),
+                  "regularMarketVolume": (v * 1000) if v is not None else None,
+                  "regularMarketTime": int(int(d.get("tlong") or 0) / 1000),
+                  "_src": "twse" if how == "成交" else "twse(%s)" % how}
+    return out
+
+
 print("=" * 92)
 print("當日即時投資建議")
 print("=" * 92)
 print("依據日報：%s（%s收盤）" % (C.BASE_DATE, C.BASE_WEEKDAY))
 
-Q = {}
+# 取價順序：鉅亨（真實成交價，約 1 分鐘）→ 交易所 MIS（約 10 秒，指數靠它）
+#           → Yahoo（約 20 分鐘延遲，僅作最後備援）
+Q = cnyes_quotes(list(C.CODES))
+MIS = mis_quotes([c for c in C.CODES if c not in Q], want_index=True)
+QI = MIS.pop("t00", None)
 for c in C.CODES:
-    m = quote(C.SYM[c])
-    if m:
-        Q[c] = m
-QI = quote(C.INDEX_SYM)
+    if c not in Q and c in MIS:
+        Q[c] = MIS[c]
+for c in C.CODES:                                # 仍缺的才回頭問 Yahoo
+    if c not in Q:
+        m = quote(C.SYM[c])
+        if m:
+            m["_src"] = "yahoo"
+            Q[c] = m
+if QI is None:
+    QI = quote(C.INDEX_SYM)
+    if QI:
+        QI["_src"] = "yahoo"
 if not Q:
     sys.exit("★ 全部取價失敗，中止（未覆蓋既有 live 頁）")
+
+SRC_LABEL = {"cnyes": "鉅亨", "twse": "交易所 MIS", "yahoo": "Yahoo（延遲約 20 分）"}
+SRC_N = {}
+for m in list(Q.values()) + ([QI] if QI else []):
+    k = str(m.get("_src") or "yahoo").split("(")[0]
+    SRC_N[k] = SRC_N.get(k, 0) + 1
+SRC_TXT = "、".join("%s %d 檔" % (SRC_LABEL.get(k, k), n) for k, n in sorted(SRC_N.items()))
+print("報價來源：%s" % SRC_TXT)
 
 # 報價時間：取各檔最新的 regularMarketTime
 qt = max(int(m.get("regularMarketTime") or 0) for m in Q.values())
@@ -80,7 +207,8 @@ if QI:
     qt = max(qt, int(QI.get("regularMarketTime") or 0))
 QT = datetime.datetime.fromtimestamp(qt)
 NOW = datetime.datetime.now()
-LAG = int((NOW - QT).total_seconds() // 60)
+LAG_S = int((NOW - QT).total_seconds())
+LAG = LAG_S // 60
 TODAY = NOW.strftime("%Y-%m-%d")
 SAME_DAY = QT.strftime("%Y-%m-%d") == TODAY
 
@@ -370,7 +498,7 @@ w('<header class="hd"><div class="hdin">')
 w("<h1>當日即時投資建議</h1>")
 w('<p><span class="ph %s">%s</span>報價時間 %s（%s）　依據 <b>%s（%s收盤）</b>日報的買賣區間</p>'
   % (PHASE_CLS, PHASE, QT.strftime("%m/%d %H:%M"),
-     ("約 %d 分鐘前" % LAG) if LAG >= 1 else "剛剛",
+     ("約 %d 秒前" % LAG_S) if LAG_S < 90 else ("約 %d 分鐘前" % LAG),
      C.BASE_DATE, C.BASE_WEEKDAY))
 w("</div></header>")
 w('<div class="wrap">')
@@ -451,13 +579,16 @@ w('<div class="foot"><h3>這頁在做什麼</h3>'
   '獲利且已進停利區＝分批停利、獲利達 15%% 可提前部分停利、'
   '虧損 5%% 進入警戒、虧損 10%% 觸及停損紀律（並以月線為最後防線）。此為規則式試算，非投資建議。</p>'
   '<h3>報價來源與延遲</h3>'
-  '<p>Yahoo Finance 即時報價（%s），台股報價通常有數分鐘至 15 分鐘延遲，'
-  '成交量為當日累計。本頁每次執行都會整份覆蓋，不保留歷史。</p>'
+  '<p>本次取價：<b>%s</b>，報價時戳 %s，與產生時間相差 <b>%s</b>；成交量為當日累計。'
+  '取價順序為鉅亨（真實成交價，約 1 分鐘）→ 臺灣證券交易所 MIS 揭示（約 10 秒，大盤指數採用此源；'
+  '個股成交價欄位未揭示時以最佳五檔中價推估）→ Yahoo Finance（延遲約 20 分鐘，僅作最後備援）。'
+  '本頁每次執行都會整份覆蓋，不保留歷史。</p>'
   '<h3>免責聲明</h3>'
   '<p>本頁由自動化流程產生，僅供研究與教育參考，不構成投資建議、要約或招攬，'
   '亦不保證資料之完整性、即時性與正確性。實際下單前請自行以券商報價複核價格，'
   '投資有風險，讀者應自行判斷並承擔所有投資決策之後果。</p></div>'
-  % (C.BASE_DATE, QT.strftime("%Y-%m-%d %H:%M")))
+  % (C.BASE_DATE, SRC_TXT, QT.strftime("%Y-%m-%d %H:%M:%S"),
+     ("%d 秒" % LAG_S) if LAG_S < 90 else ("%d 分鐘" % LAG)))
 
 w('</div>\n<p style="text-align:center;color:#7a8798;font-size:11.5px;margin:14px 0 20px">'
   '產生時間 %s（台北時間）</p>' % NOW.strftime("%Y-%m-%d %H:%M"))
@@ -469,7 +600,8 @@ lp = os.path.join(LIVE_DIR, "index.html")
 open(lp, "w", encoding="utf-8", newline="\n").write("\n".join(H) + "\n")
 print("\n1) live/index.html 已覆蓋，%d 檔、%d 項提醒" % (len(ROWS), len(ALERTS)))
 
-meta = {"quote_time": QT.strftime("%Y-%m-%d %H:%M"), "gen_time": NOW.strftime("%Y-%m-%d %H:%M"),
+meta = {"quote_time": QT.strftime("%Y-%m-%d %H:%M:%S"), "gen_time": NOW.strftime("%Y-%m-%d %H:%M:%S"),
+        "lag_sec": LAG_S, "source": SRC_TXT,
         "phase": PHASE, "base_date": C.BASE_DATE, "alerts": len(ALERTS)}
 json.dump(meta, open(os.path.join(D, "live_meta.json"), "w", encoding="utf-8"),
           ensure_ascii=False, indent=1)
