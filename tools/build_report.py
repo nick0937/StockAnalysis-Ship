@@ -493,3 +493,34 @@ os.makedirs(outdir, exist_ok=True)
 open(os.path.join(outdir, "index.html"), "w", encoding="utf-8").write(html)
 print("1) %s\\index.html 已寫入，%d 字元" % (C.YMD, len(html)))
 print("   排名：" + "｜".join("%s %d" % (IND["stocks"][c]["name"], TOT[c]) for c in RANK))
+
+# ── 守則 §14.1：敘述長度上限自檢（只提醒、不改內容）────────────────
+#    上限：EMPTY_S／HOLD_S／OPS_S 各 3 句、TGT_S 2~3 句、每段 ⚠ ≤1、每段 <b> ≤3
+#    2026-08-17~08-21 五期文字由 1,095 字漂到 1,836 字（+68%），故加此防呆
+import re as _re
+_LIM = [("空手", EMPTY_S, 3), ("持有", HOLD_S, 3), ("操作參考", OPS_S, 3), ("目標價", TGT_S, 3)]
+_warn = []
+for _nm, _d, _lim in _LIM:
+    for _c, _v in _d.items():
+        _t = _re.sub(r"<[^>]+>", "", _v)
+        _ns = len([x for x in _re.split(r"[。！？]", _t) if x.strip()])
+        if _ns > _lim:
+            _warn.append("%s %s %d 句 > %d" % (_c, _nm, _ns, _lim))
+        if _v.count("⚠") > 1:
+            _warn.append("%s %s ⚠ %d 個 > 1" % (_c, _nm, _v.count("⚠")))
+        if _v.count("<b>") > 3:
+            _warn.append("%s %s 粗體 %d 段 > 3" % (_c, _nm, _v.count("<b>")))
+for _c, _z in ZONE.items():
+    for _k in ("buy_cond", "sell_cond"):
+        _n3 = len(_re.findall(r"\([1-9]\)", _z.get(_k, "")))
+        if _n3 > 3:
+            _warn.append("%s %s 編號條件 %d 條 > 3" % (_c, _k, _n3))
+if _warn:
+    print("   ⚠ 守則 §14.1 敘述長度超標 %d 項（只提醒、不改內容）：" % len(_warn))
+    for _w in _warn[:12]:
+        print("      " + _w)
+else:
+    _avg = {_nm: sum(len(_re.sub(r"<[^>]+>", "", v)) for v in _d.values()) / len(_d)
+            for _nm, _d, _ in _LIM}
+    print("   §14.1 敘述長度：" + "｜".join("%s %.0f 字" % (k, v) for k, v in _avg.items())
+          + "（合計 %.0f 字/檔，上限內）" % sum(_avg.values()))
