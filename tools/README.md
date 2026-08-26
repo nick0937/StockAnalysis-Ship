@@ -58,6 +58,8 @@ python calc_fin.py            # 算財報衍生指標（含 FCF=CFO+CFI 驗證�
 python build_report.py        # 產生報告
 python verify_rwd.py          # RWD 四寬度必須全過
 python finalize.py            # 檢查 → 首頁 → COMMIT_MSG（順序已內建）
+python build_live.py          # ★ 日報跑完一定要接著跑（守則 12A 鐵則 8），讓 live/ 換到當期基準日
+python verify_rwd.py live     # 即時頁 RWD 四寬度
 ```
 
 **不要自己 `git commit`／`push`** —— 由使用者雙擊「建立Commit.bat」處理。
