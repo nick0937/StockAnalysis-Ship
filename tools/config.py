@@ -13,8 +13,8 @@ DESC_TMPL = "台股航運族群每日個股觀察報告 — {base_date} 收盤�
 REPO = r"C:\Users\user\Desktop\StockAnalysis-Ship"
 
 # ── 資料基準日（★ 每次跑報告都要改）──────────────────────────────
-BASE_DATE = "2026-08-21"          # 收盤日 YYYY-MM-DD
-BASE_WEEKDAY = "週五"              # 用於「（週四收盤）」字樣
+BASE_DATE = "2026-08-25"          # 收盤日 YYYY-MM-DD
+BASE_WEEKDAY = "週二"              # 用於「（週四收盤）」字樣
 YMD = BASE_DATE.replace("-", "")   # 資料夾名
 
 # 若為隔日補跑（資券已補齊），寫一句說明；否則設為 ""
