@@ -17,7 +17,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
 sys.path.insert(0, os.path.join(BASE, "inputs"))
 import config as C
-from lib import total_score, market_score, band_of
+from lib import total_score, market_score, band_of, tech_adj
 import market as MK
 from scores import S, ADV
 from zones import ZONE
@@ -28,9 +28,12 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 LIVE_DIR = os.path.join(C.REPO, "live")
 
-# 綜合分（與日報一致：大盤面由公式覆寫）
+# 綜合分（與日報一致：技術面加上 §9.1 客觀加減分、大盤面由公式覆寫）
+# ★ 2026-08-27 修：原本漏了 tech_adj，導致有背離／DMA 交叉訊號的個股
+#   在即時頁顯示的綜合分與當期日報差 1 分（2026-08-26 期：2615 77 vs 76、2606 70 vs 69）。
 for c in C.CODES:
-    S[c] = (S[c][0], S[c][1], S[c][2],
+    adj = tech_adj(IND["stocks"][c])[0]
+    S[c] = (S[c][0], max(0, min(100, S[c][1] + adj)), S[c][2],
             market_score(MK.ENV_SCORE, IND["stocks"][c]["rs"]), S[c][4])
 TOT = {c: total_score(S[c]) for c in C.CODES}
 
