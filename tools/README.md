@@ -24,7 +24,8 @@
 | `calc_fin.py` | ✗ | 由 `inputs/fin_raw.json` 算財報衍生指標 → `data/fin.json` |
 | `build_report.py` | ✗ | 產生 `REPO/YYYYMMDD/index.html` |
 | **`build_live.py`** | ✗ | **當日即時投資建議 → `REPO/live/index.html`（每次覆蓋，盤中可重複跑）** |
-| `finalize.py` | ✗ | 交付前檢查 → 重建首頁 → 寫 `COMMIT_MSG.txt` |
+| `finalize.py` | ✗ | 交付前檢查 → **刪除超出保留期數的舊報告** → 重建首頁 → 寫 `COMMIT_MSG.txt` |
+| **`prune_reports.py`** | ✗ | **只留最新 `KEEP_PERIODS` 期報告資料夾，跑報告前先執行（守則 12B）；`--dry-run` 可先試算** |
 | `verify_rwd.py` | ✗ | Playwright 四寬度 RWD 驗證（可加 `live`／`home` 指定目標） |
 | **`inputs/*.py`** | **★ 每次跑都要更新** | 每日蒐集的資料與判斷（見下） |
 
@@ -48,6 +49,7 @@
 
 ```bash
 cd tools
+python prune_reports.py       # ★ 先清：只留最新 KEEP_PERIODS（10）期，超出的先刪（守則 12B）
 # 0. 改 config.py 的 BASE_DATE / BASE_WEEKDAY / RERUN_NOTE
 python fetch_quotes.py        # 抓行情，並印出要填進 market.py 的成交金額
 python calc_indicators.py     # 算指標（會自動濾除盤中未完成 K 棒）

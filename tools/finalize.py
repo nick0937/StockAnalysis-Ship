@@ -95,9 +95,13 @@ keep[C.YMD] = ('\n  <span class="i-d">%s/%s/%s<em>%s</em><span class="new">最�
                   "up" if idx["chg"] > 0 else "dn", idx["chg"], idx["chg_pct"],
                   MK.ENV_SCORE, len(C.CODES), nm(top), top, TOT[top]))
 
-dirs = sorted([d for d in os.listdir(C.REPO)
-               if re.fullmatch(r"\d{8}", d) and os.path.isdir(os.path.join(C.REPO, d))],
-              reverse=True)
+# ★ 守則 §12B（2026-08-27）：重建首頁前先刪除超出保留期數的舊報告資料夾，
+#   只留最新 config.KEEP_PERIODS 期。放在這裡是為了「就算忘了跑第 0 步也一定會執行」，
+#   且刪除必定發生在首頁重建之前，首頁不會列到已刪除的期別。
+from prune_reports import prune as _prune, list_periods as _list_periods
+
+_prune()
+dirs = _list_periods()
 lst = ""
 for i, d in enumerate(dirs):
     body = keep.get(d)
