@@ -62,9 +62,10 @@ python verify_rwd.py          # RWD 四寬度必須全過
 python finalize.py            # 檢查 → 首頁 → COMMIT_MSG（順序已內建）
 python build_live.py          # ★ 日報跑完一定要接著跑（守則 12A 鐵則 8），讓 live/ 換到當期基準日
 python verify_rwd.py live     # 即時頁 RWD 四寬度
+cd .. && cmd //c "建立Commit.bat" < /dev/null   # ★ 最後一步：建立 commit（只 commit 不 push）
 ```
 
-**不要自己 `git commit`／`push`** —— 由使用者雙擊「建立Commit.bat」處理。
+**commit 由流程代跑、push 一律不碰**：即時頁跑完後接著執行 repo 根目錄的「建立Commit.bat」（`cmd //c "建立Commit.bat" < /dev/null`），它<b>只 commit 不 push</b>；要推上 GitHub Pages 得由使用者自行跑「發布到GitHub.bat」或 `git push`。詳見守則第 12／12A 節。
 
 ---
 
