@@ -495,17 +495,24 @@ print("1) %s\\index.html 已寫入，%d 字元" % (C.YMD, len(html)))
 print("   排名：" + "｜".join("%s %d" % (IND["stocks"][c]["name"], TOT[c]) for c in RANK))
 
 # ── 守則 §14.1：敘述長度上限自檢（只提醒、不改內容）────────────────
-#    上限：EMPTY_S／HOLD_S／OPS_S 各 3 句、TGT_S 2~3 句、每段 ⚠ ≤1、每段 <b> ≤3
-#    2026-08-17~08-21 五期文字由 1,095 字漂到 1,836 字（+68%），故加此防呆
+#    2026-09-15 收緊：每日敘述由約 15,350 字降到約 7,500 字（非豁免部分 −61%）
+#    個股：EMPTY_S／HOLD_S／TGT_S 各 2 句且 ≤120 字；OPS_S 維持 3 句（★ 豁免字數上限）
+#    建議書：TREND／SUMMARY 各 ≤420 字；KEY_CHANGES ≤5 項、每項 ≤200 字；
+#            EVENTS ≤3 項、每項 ≤150 字；DATA_NOTES ★ 豁免（方法論說明，非每日敘述）
 import re as _re
-_LIM = [("空手", EMPTY_S, 3), ("持有", HOLD_S, 3), ("操作參考", OPS_S, 3), ("目標價", TGT_S, 3)]
+_plain = lambda t: _re.sub(r"<[^>]+>", "", t)
+_nsent = lambda t: len([x for x in _re.split(r"[。！？]", _plain(t)) if x.strip()])
+#            (名稱, 資料, 句數上限, 字數上限 None=豁免)
+_LIM = [("空手", EMPTY_S, 2, 120), ("持有", HOLD_S, 2, 120),
+        ("操作參考", OPS_S, 3, None), ("目標價", TGT_S, 2, 120)]
 _warn = []
-for _nm, _d, _lim in _LIM:
+for _nm, _d, _lim, _cap in _LIM:
     for _c, _v in _d.items():
-        _t = _re.sub(r"<[^>]+>", "", _v)
-        _ns = len([x for x in _re.split(r"[。！？]", _t) if x.strip()])
+        _ns = _nsent(_v)
         if _ns > _lim:
             _warn.append("%s %s %d 句 > %d" % (_c, _nm, _ns, _lim))
+        if _cap and len(_plain(_v)) > _cap:
+            _warn.append("%s %s %d 字 > %d" % (_c, _nm, len(_plain(_v)), _cap))
         if _v.count("⚠") > 1:
             _warn.append("%s %s ⚠ %d 個 > 1" % (_c, _nm, _v.count("⚠")))
         if _v.count("<b>") > 3:
@@ -515,12 +522,30 @@ for _c, _z in ZONE.items():
         _n3 = len(_re.findall(r"\([1-9]\)", _z.get(_k, "")))
         if _n3 > 3:
             _warn.append("%s %s 編號條件 %d 條 > 3" % (_c, _k, _n3))
+# 建議書每日變動四段
+for _nm, _t, _cap in (("TREND", MK.TREND, 420), ("SUMMARY", MK.SUMMARY, 420)):
+    if len(_plain(_t)) > _cap:
+        _warn.append("建議書 %s %d 字 > %d" % (_nm, len(_plain(_t)), _cap))
+for _nm, _lst, _nmax, _cap in (("當日關鍵變化", MK.KEY_CHANGES, 5, 200),
+                               ("必須注意的事件", MK.EVENTS, 3, 150)):
+    if len(_lst) > _nmax:
+        _warn.append("建議書 %s %d 項 > %d" % (_nm, len(_lst), _nmax))
+    for _i, _x in enumerate(_lst):
+        if len(_plain(_x)) > _cap:
+            _warn.append("建議書 %s 第 %d 項 %d 字 > %d" % (_nm, _i + 1, len(_plain(_x)), _cap))
 if _warn:
     print("   ⚠ 守則 §14.1 敘述長度超標 %d 項（只提醒、不改內容）：" % len(_warn))
     for _w in _warn[:12]:
         print("      " + _w)
 else:
-    _avg = {_nm: sum(len(_re.sub(r"<[^>]+>", "", v)) for v in _d.values()) / len(_d)
-            for _nm, _d, _ in _LIM}
-    print("   §14.1 敘述長度：" + "｜".join("%s %.0f 字" % (k, v) for k, v in _avg.items())
-          + "（合計 %.0f 字/檔，上限內）" % sum(_avg.values()))
+    _avg = {_nm: sum(len(_plain(v)) for v in _d.values()) / len(_d)
+            for _nm, _d, _, _ in _LIM}
+    _adv = (len(_plain(MK.TREND)) + len(_plain(MK.SUMMARY))
+            + sum(len(_plain(x)) for x in MK.KEY_CHANGES)
+            + sum(len(_plain(x)) for x in MK.EVENTS))
+    print("   §14.1 個股：" + "｜".join("%s %.0f 字" % (k, v) for k, v in _avg.items())
+          + "（合計 %.0f 字/檔）" % sum(_avg.values()))
+    print("   §14.1 建議書每日四段：%d 字（TREND %d＋SUMMARY %d＋關鍵變化 %d 項＋事件 %d 項）"
+          % (_adv, len(_plain(MK.TREND)), len(_plain(MK.SUMMARY)),
+             len(MK.KEY_CHANGES), len(MK.EVENTS)))
+    print("   §14.1 每日敘述總量：%.0f 字（上限內）" % (sum(_avg.values()) * len(EMPTY_S) + _adv))
