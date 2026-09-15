@@ -123,6 +123,105 @@ def tech_adj(a):
     return adj, items
 
 
+
+# ── B 組客觀加減分：八大策略訊號（2026-09-15 新增，守則 §9.2）────────
+# ★ 與 A 組（tech_adj）嚴格分工，避免重複計分：
+#   A 組只管 MACD 背離與 DMA 當日交叉；B 組只管下列五類、A 組完全沒碰的事件。
+#   ⚠ 乖離率本身已在手評判讀分內，所以 B 組只在「z-score 超過 ±2」這個
+#     客觀極端門檻時才計分——計的是「極端」這件事，不是乖離本身。
+STRAT_ADJ_CAP = 5           # B 組合計封頂
+VWAP_CROSS_ADJ = 2.0        # 當日站上／跌破 20 日 VWAP
+VWAP_BOTH_ADJ = 1.0         # 同時站上／跌破 20 日與 60 日 VWAP 的額外分
+BRK_VOL_ADJ = 3.0           # 帶量突破／跌破 20 日區間
+BRK_NOVOL_ADJ = 1.0         # 突破但量能不足（假突破疑慮）
+GAP_OPEN_ADJ = 2.0          # 當日跳空且未回補
+GAP_FILL_ADJ = 1.0          # 缺口被回補
+TRAIL_ADJ = 2.0             # 收盤跌破吊燈式移動停利線
+TRAIL_RISE_ADJ = 1.0        # 停利線隨波段高點上移且價格仍在其上
+ZSCORE_ADJ = 2.0            # 乖離 z-score 超過 ±2（均值回歸門檻）
+ZSCORE_TH = 2.0
+
+
+def strat_adj(a):
+    """八大策略的客觀訊號分。回傳 (adj, 明細 list)，範圍 ±STRAT_ADJ_CAP。
+
+    對應策略：1／5 VWAP 攻防、2 區間突破、7 缺口、8 移動停利、4 均值回歸。
+    （3 短線剝頭皮屬盤中，只放即時建議頁，不進日報評分。
+      6 支撐壓力拉回確認由條件盒的區間／錨點承擔，不另計分。）
+    """
+    items, total = [], 0.0
+    c = a.get("close")
+
+    # 1／5：VWAP 攻防 ------------------------------------------------
+    vw, vwp, vw60 = a.get("vwap20"), a.get("vwap20_prev"), a.get("vwap60")
+    if c and vw and vwp:
+        pc = a.get("prev_close")
+        if pc:
+            was, now = pc >= vwp, c >= vw
+            if now and not was:
+                total += VWAP_CROSS_ADJ
+                items.append("站上 20 日 VWAP %.2f ＋%.0f" % (vw, VWAP_CROSS_ADJ))
+            elif was and not now:
+                total -= VWAP_CROSS_ADJ
+                items.append("跌破 20 日 VWAP %.2f −%.0f" % (vw, VWAP_CROSS_ADJ))
+        if vw60:
+            if c >= vw and c >= vw60:
+                total += VWAP_BOTH_ADJ
+                items.append("同時站上 20／60 日 VWAP ＋%.0f" % VWAP_BOTH_ADJ)
+            elif c < vw and c < vw60:
+                total -= VWAP_BOTH_ADJ
+                items.append("同時跌破 20／60 日 VWAP −%.0f" % VWAP_BOTH_ADJ)
+
+    # 2：20 日區間突破 ----------------------------------------------
+    b = a.get("breakout") or {}
+    if b.get("dir") in ("向上突破", "向下跌破"):
+        v = BRK_VOL_ADJ if b.get("vol_ok") else BRK_NOVOL_ADJ
+        sign = 1 if b["dir"] == "向上突破" else -1
+        total += sign * v
+        items.append("%s 20 日區間 %.2f（量 %.2f 倍%s）%s%.0f"
+                     % (b["dir"], b.get("level", 0), b.get("vol_ratio") or 0,
+                        "、帶量" if b.get("vol_ok") else "、量能不足",
+                        "＋" if sign > 0 else "−", v))
+
+    # 7：跳空缺口 ----------------------------------------------------
+    g = a.get("gap") or {}
+    t = g.get("today")
+    if t:
+        sign = 1 if t["dir"] == "向上跳空" else -1
+        total += sign * GAP_OPEN_ADJ
+        items.append("%s %.2f~%.2f（%.2f%%）%s%.0f"
+                     % (t["dir"], t["lo"], t["hi"], t["pct"],
+                        "＋" if sign > 0 else "−", GAP_OPEN_ADJ))
+
+    # 8：吊燈式移動停利 ----------------------------------------------
+    at = a.get("atr") or {}
+    if at.get("stop"):
+        if not at.get("above"):
+            total -= TRAIL_ADJ
+            items.append("收盤跌破移動停利線 %.2f −%.0f" % (at["stop"], TRAIL_ADJ))
+        elif at.get("rising"):
+            total += TRAIL_RISE_ADJ
+            items.append("移動停利線上移到 %.2f 且價格仍在其上 ＋%.0f"
+                         % (at["stop"], TRAIL_RISE_ADJ))
+
+    # 4：乖離 z-score 的均值回歸門檻 ---------------------------------
+    z = a.get("bias_z") or {}
+    zv = z.get("z")
+    if zv is not None and abs(zv) > ZSCORE_TH:
+        sign = -1 if zv > 0 else 1        # 過度延伸扣分、過度超跌加分
+        total += sign * ZSCORE_ADJ
+        items.append("20 日乖離 z-score %+.2f（%s）%s%.0f"
+                     % (zv, "過度延伸" if zv > 0 else "過度超跌",
+                        "＋" if sign > 0 else "−", ZSCORE_ADJ))
+
+    adj = half_up(max(-STRAT_ADJ_CAP, min(STRAT_ADJ_CAP, total)))
+    if abs(total) > STRAT_ADJ_CAP:
+        items.append("合計 %s%.1f，封頂至 %s%d"
+                     % ("＋" if total >= 0 else "−", abs(total),
+                        "＋" if adj >= 0 else "−", abs(adj)))
+    return adj, items
+
+
 # ── 技術判讀分的錨定區間（2026-08-20 新增，守則 §9.0）───────────────
 # ★ 只做防呆對照：build_report.py 建置時檢查「手評判讀分是否落在錨定區間
 #   ±TECH_ANCHOR_TOL 內」，超出就印警告提醒複查（守則規定超出區間 ±5 必須

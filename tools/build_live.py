@@ -259,6 +259,26 @@ for c in C.CODES:
     up_ma = sum(1 for k in ("5", "10", "20", "60", "120", "240")
                 if a["ma"].get(k) and px and px >= a["ma"][k])
 
+    # ── 短線（剝頭皮）參考：策略 3，只在盤中頁呈現 ──────────────
+    #    ⚠ 真正的當日 VWAP 需要逐筆資料；此處用當日 (高+低+現)/3 近似，已於頁面標明。
+    sc_avg = ((hi + lo + px) / 3.0) if None not in (hi, lo, px) else None
+    sc_pos = ((px - lo) / (hi - lo) * 100) if (hi is not None and lo is not None
+                                               and hi > lo and px is not None) else None
+    sc_vw = a.get("vwap20")
+    sc_stop = (a.get("atr") or {}).get("stop")
+    sc_rng = a.get("breakout") or {}
+    if sc_avg is None or px is None:
+        sc_side, sc_note = "查無", "盤中報價不完整，短線參考本次不計算。"
+    elif px >= sc_avg and (pc is None or px >= pc):
+        sc_side = "偏多"
+        sc_note = "現價在當日均價之上且未跌破昨收，短線偏多方；停損看當日均價 %s。" % fmt(sc_avg)
+    elif px < sc_avg and (pc is not None and px < pc):
+        sc_side = "偏空"
+        sc_note = "現價同時低於當日均價與昨收，短線偏空方；反彈到 %s 之上才轉中性。" % fmt(sc_avg)
+    else:
+        sc_side = "中性"
+        sc_note = "現價與當日均價 %s、昨收 %s 方向不一致，短線不宜追價。" % (fmt(sc_avg), fmt(pc))
+
     bz, sz = bounds(z["buy_zone"]), bounds(z["sell_zone"])
     _, e_ico, e_lab, _, h_ico, h_lab = ADV[c]
 
@@ -324,6 +344,9 @@ for c in C.CODES:
         ALERTS.append((c, "時", C.TIME_PRESSURE[c].split("、")[0]))
 
     ROWS.append(dict(c=c, name=C.NAME[c], px=px, chg=chg, chgp=chgp, hi=hi, lo=lo,
+                     sc_side=sc_side, sc_note=sc_note, sc_avg=sc_avg, sc_pos=sc_pos,
+                     sc_vw=sc_vw, sc_stop=sc_stop,
+                     sc_rhi=sc_rng.get("hi"), sc_rlo=sc_rng.get("lo"),
                      lots=lots, vr=vr, up_ma=up_ma, tot=TOT[c], band=band_of(TOT[c]),
                      e_ico=e_ico, e_lab=e_lab, h_ico=h_ico, h_lab=h_lab,
                      e_cls=e_cls, e_act=e_act, e_why=e_why,
@@ -389,6 +412,7 @@ h2.s{margin:16px 0 9px;font-size:clamp(15px,4.2vw,19px);padding-left:9px;border-
 .sim{margin-top:9px;padding:9px 10px;background:#f6f8fb;border:1px dashed #c3cfdf;border-radius:8px}
 .sim .sh{display:flex;flex-wrap:wrap;align-items:baseline;gap:7px;margin-bottom:7px;font-size:11.5px;color:var(--ink3)}
 .sim .sh b{font-size:12.5px;color:var(--ink2)}
+.k.ks{background:#6d28d9;color:#fff}
 .simrow{display:flex;gap:7px;align-items:center}
 .simrow input{flex:1;min-width:0;max-width:190px;border:1px solid var(--line);border-radius:7px;
  padding:7px 10px;font-size:16px;font-variant-numeric:tabular-nums;background:#fff;color:var(--ink)}
@@ -553,6 +577,16 @@ for r in ROWS:
       '<span class="pv">日報建議：%s %s</span>'
       '<span class="v %s">%s</span><span class="w">%s</span></div>'
       % (r["h_ico"], r["h_lab"], r["h_cls"], r["h_act"], r["h_why"]))
+    w('<div class="act"><span class="k ks">短線</span>'
+      '<span class="pv">當日均價 %s（近似）</span>'
+      '<span class="v %s">%s</span><span class="w">%s'
+      '　當日區間位置 %s；20 日 VWAP %s、20 日區間 %s~%s、移動停利線 %s。'
+      '⚠ 剝頭皮屬盤中操作，與上方日報的波段建議是兩套邏輯，不要混用。</span></div>'
+      % (fmt(r["sc_avg"]),
+         {"偏多": "a-buy", "偏空": "a-no", "中性": "a-wait"}.get(r["sc_side"], "a-wait"),
+         r["sc_side"], r["sc_note"],
+         ("%.0f%%" % r["sc_pos"]) if r["sc_pos"] is not None else "查無",
+         fmt(r["sc_vw"]), fmt(r["sc_rlo"]), fmt(r["sc_rhi"]), fmt(r["sc_stop"])))
     ga = lambda v: "" if v is None else ("%g" % v)
     w('<div class="sim" data-c="%s" data-px="%s" data-sz0="%s" data-sz1="%s" '
       'data-ma5="%s" data-ma20="%s" data-hk="%s" data-slab="%s" data-szone="%s">'

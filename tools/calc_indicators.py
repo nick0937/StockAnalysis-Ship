@@ -198,6 +198,138 @@ def macd_div(rows, osc):
     return res
 
 
+
+# ══════════════════════════════════════════════════════════════════
+# ★ 八大策略指標（2026-09-15 新增，守則 §9.2）
+#   全部只用日 K 的 OHLCV 計算，不需要新資料源。
+# ══════════════════════════════════════════════════════════════════
+def _tp(r):
+    """典型價 (H+L+C)/3 —— VWAP 的價格基準。"""
+    return (r["h"] + r["l"] + r["c"]) / 3.0
+
+
+def vwap_of(rows):
+    """一段 K 棒的成交量加權平均價；量為 0 時回 None（不做等權退化）。"""
+    tv = sum(r["v"] for r in rows)
+    if not tv:
+        return None
+    return sum(_tp(r) * r["v"] for r in rows) / tv
+
+
+def anchored_vwap(rows, i0):
+    """自 rows[i0] 起算的錨定 VWAP（AVWAP）。"""
+    return vwap_of(rows[i0:]) if 0 <= i0 < len(rows) else None
+
+
+def range_block(rows, k):
+    """前 k 根（不含當日）的高低區間，用於判斷『今天是不是突破』。"""
+    prev = rows[-(k + 1):-1]
+    if len(prev) < k:
+        return None
+    return {"hi": max(r["h"] for r in prev), "lo": min(r["l"] for r in prev), "k": k}
+
+
+def breakout_block(rows, v20):
+    """N 日區間突破（策略 2）。
+    量 >= 1.5 倍 20 日均量才算『帶量有效突破』，否則標為量能不足。"""
+    r20 = range_block(rows, 20)
+    if not r20:
+        return None
+    c, v = rows[-1]["c"], rows[-1]["v"]
+    ratio = (v / v20) if v20 else None
+    ok = bool(ratio and ratio >= 1.5)
+    if c > r20["hi"]:
+        d, lvl = "向上突破", r20["hi"]
+    elif c < r20["lo"]:
+        d, lvl = "向下跌破", r20["lo"]
+    else:
+        return {"dir": "區間內", "hi": r20["hi"], "lo": r20["lo"],
+                "vol_ratio": ratio, "vol_ok": ok,
+                "pos": (c - r20["lo"]) / (r20["hi"] - r20["lo"]) * 100
+                       if r20["hi"] > r20["lo"] else None}
+    return {"dir": d, "level": lvl, "hi": r20["hi"], "lo": r20["lo"],
+            "vol_ratio": ratio, "vol_ok": ok,
+            "ext_pct": (c / lvl - 1) * 100}
+
+
+def gap_block(rows, lookback=60):
+    """跳空缺口與回補（策略 7）。
+    向上跳空＝今日最低 > 昨日最高；向下跳空＝今日最高 < 昨日最低。
+    未回補＝之後沒有任何一根 K 棒的影線把缺口填回去。"""
+    today = None
+    a, b = rows[-2], rows[-1]
+    if b["l"] > a["h"]:
+        today = {"dir": "向上跳空", "lo": a["h"], "hi": b["l"],
+                 "pct": (b["l"] / a["h"] - 1) * 100}
+    elif b["h"] < a["l"]:
+        today = {"dir": "向下跳空", "lo": b["h"], "hi": a["l"],
+                 "pct": (b["h"] / a["l"] - 1) * 100}
+    opens = []
+    n = len(rows)
+    lo_i = max(1, n - lookback)
+    for j in range(lo_i, n):
+        p, q = rows[j - 1], rows[j]
+        if q["l"] > p["h"]:
+            g = {"d": q["d"], "dir": "向上", "lo": p["h"], "hi": q["l"]}
+            filled = any(r["l"] <= g["lo"] for r in rows[j + 1:])
+        elif q["h"] < p["l"]:
+            g = {"d": q["d"], "dir": "向下", "lo": q["h"], "hi": p["l"]}
+            filled = any(r["h"] >= g["hi"] for r in rows[j + 1:])
+        else:
+            continue
+        if not filled:
+            g["pct"] = (g["hi"] / g["lo"] - 1) * 100
+            g["bars_since"] = n - 1 - j
+            opens.append(g)
+    return {"today": today, "open_gaps": opens[-4:], "n_open": len(opens)}
+
+
+def atr_block(rows, k=14, mult=3.0, look=22):
+    """ATR 與吊燈式移動停利（策略 8）。
+    多頭移動停利線 ＝ 近 look 日最高收盤 − mult × ATR(k)，只會上移不會下移。"""
+    if len(rows) < k + 1:
+        return None
+    trs = []
+    for i in range(len(rows) - k, len(rows)):
+        h, l, pc = rows[i]["h"], rows[i]["l"], rows[i - 1]["c"]
+        trs.append(max(h - l, abs(h - pc), abs(l - pc)))
+    atr = sum(trs) / k
+    win = rows[-look:] if len(rows) >= look else rows
+    hh = max(r["c"] for r in win)
+    stop = hh - mult * atr
+    # 移動停利線是否比前一日上移（用前一日的視窗重算）
+    prev_stop = None
+    if len(rows) > look:
+        trs_p = []
+        for i in range(len(rows) - 1 - k, len(rows) - 1):
+            h, l, pc = rows[i]["h"], rows[i]["l"], rows[i - 1]["c"]
+            trs_p.append(max(h - l, abs(h - pc), abs(l - pc)))
+        atr_p = sum(trs_p) / k
+        prev_stop = max(r["c"] for r in rows[-look - 1:-1]) - mult * atr_p
+    c = rows[-1]["c"]
+    return {"atr": atr, "atr_pct": atr / c * 100 if c else None,
+            "hh": hh, "stop": stop, "prev_stop": prev_stop,
+            "rising": bool(prev_stop is not None and stop > prev_stop),
+            "above": c > stop, "room_pct": (c / stop - 1) * 100 if stop > 0 else None}
+
+
+def bias_zscore(cl, k=20, look=60):
+    """乖離率 z-score（策略 4）：當日 k 日乖離相對過去 look 日乖離分布的標準差倍數。
+    |z| > 2 代表這個乖離在自己的歷史裡屬於極端值 —— 均值回歸的客觀門檻。"""
+    if len(cl) < k + look:
+        return None
+    ser = []
+    for i in range(len(cl) - look, len(cl)):
+        m = sum(cl[i - k + 1:i + 1]) / k
+        ser.append((cl[i] / m - 1) * 100 if m else 0.0)
+    mu = sum(ser) / len(ser)
+    var = sum((x - mu) ** 2 for x in ser) / len(ser)
+    sd = var ** 0.5
+    if sd == 0:
+        return None
+    return {"z": (ser[-1] - mu) / sd, "bias": ser[-1], "mu": mu, "sd": sd}
+
+
 def analyze(rows, label):
     cl = [r["c"] for r in rows]
     vol = [r["v"] for r in rows]
@@ -215,6 +347,14 @@ def analyze(rows, label):
     base = datetime.date.fromisoformat(last["d"])
     yr = [r for r in rows if (base - datetime.date.fromisoformat(r["d"])).days <= 365]
     hi52, lo52 = max(r["h"] for r in yr), min(r["l"] for r in yr)
+    # 錨定 VWAP 的兩個錨點：52 週高／低那一根 K 棒在 rows 裡的位置
+    _i_hi52 = max(range(len(rows)), key=lambda i: (rows[i]["h"], i))
+    _i_lo52 = min(range(len(rows)), key=lambda i: (rows[i]["l"], -i))
+    _yrset = {r["d"] for r in yr}
+    _cand_hi = [i for i, r in enumerate(rows) if r["d"] in _yrset and r["h"] == hi52]
+    _cand_lo = [i for i, r in enumerate(rows) if r["d"] in _yrset and r["l"] == lo52]
+    _i_hi52 = _cand_hi[-1] if _cand_hi else _i_hi52
+    _i_lo52 = _cand_lo[-1] if _cand_lo else _i_lo52
     py = [r for r in rows if r["d"][:4] < last["d"][:4]]
     v5, v20 = sma(vol, 5), sma(vol, 20)
     return {"label": label, "date": last["d"], "close": last["c"],
@@ -233,6 +373,17 @@ def analyze(rows, label):
             "bw": (up - dn) / mid * 100 if mid else None,
             "v5": v5 / 1000 if v5 else None, "v20": v20 / 1000 if v20 else None,
             "vr": last["v"] / v5 if v5 else None,
+            # ★ 八大策略指標（守則 §9.2）
+            "vwap20": vwap_of(rows[-20:]) if len(rows) >= 20 else None,
+            "vwap60": vwap_of(rows[-60:]) if len(rows) >= 60 else None,
+            "vwap20_prev": vwap_of(rows[-21:-1]) if len(rows) >= 21 else None,
+            "avwap_lo52": anchored_vwap(rows, _i_lo52),
+            "avwap_hi52": anchored_vwap(rows, _i_hi52),
+            "rng20": range_block(rows, 20), "rng60": range_block(rows, 60),
+            "breakout": breakout_block(rows, v20),
+            "gap": gap_block(rows),
+            "atr": atr_block(rows),
+            "bias_z": bias_zscore(cl),
             "vr20": last["v"] / v20 if v20 else None,
             "hi52": hi52, "lo52": lo52,
             "from_hi52": (last["c"] / hi52 - 1) * 100,

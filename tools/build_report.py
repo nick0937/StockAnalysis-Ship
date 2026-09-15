@@ -19,7 +19,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
 sys.path.insert(0, os.path.join(BASE, "inputs"))
 import config as C
-from lib import (n, cm, sgn, cls, num_td, band_of, scls, total_score, market_score, tech_adj,
+from lib import (n, cm, sgn, cls, num_td, band_of, scls, total_score, market_score, tech_adj, strat_adj,
                  tech_anchor, TECH_ANCHOR_TOL, spark, mc, twrap, mabar, chip, opbox, MA_LABEL)
 import market as MK
 from scores import S, FUND, ADV
@@ -84,14 +84,15 @@ def div_cell(a):
 TADJ = {}
 for c in C.CODES:
     rs = IND["stocks"][c]["rs"]
-    adj, why = tech_adj(IND["stocks"][c])
-    TADJ[c] = (S[c][1], adj, why)
+    adj, why = tech_adj(IND["stocks"][c])           # A 組：MACD 背離＋DMA 交叉（±10）
+    sadj, swhy = strat_adj(IND["stocks"][c])        # B 組：八大策略訊號（±5，守則 §9.2）
+    TADJ[c] = (S[c][1], adj, why, sadj, swhy)
     lo, hi, ref = tech_anchor(IND["stocks"][c])
     if not (lo - TECH_ANCHOR_TOL <= S[c][1] <= hi + TECH_ANCHOR_TOL):
         print("   ⚠ %s 技術判讀分 %d 超出錨定區間 %d~%d 逾 ±%d（區間內參考落點 %d）"
               "→ 依守則 §9.0 複查，維持須在 scores.py 寫明理由"
               % (c, S[c][1], lo, hi, TECH_ANCHOR_TOL, ref))
-    S[c] = (S[c][0], max(0, min(100, S[c][1] + adj)), S[c][2],
+    S[c] = (S[c][0], max(0, min(100, S[c][1] + adj + sadj)), S[c][2],
             market_score(MK.ENV_SCORE, rs), S[c][4])
 TOT = {c: total_score(S[c]) for c in C.CODES}
 RANK = sorted(C.CODES, key=lambda c: -TOT[c])
@@ -410,12 +411,15 @@ for c in RANK:
     A('<p class="tnote fdet">基本面 %d 分內部拆解：%s</p>'
       % (S[c][2], "、".join("%s %d/%d" % (p[0], v, p[1])
                             for p, v in zip(C.FUND_PARTS, FUND[c]))))
-    _tb, _ta, _tw = TADJ[c]
-    A('<p class="tnote fdet">技術面 %d 分 ＝ 判讀分 %d %s %d'
-      '（DMA 與 MACD 背離的<b>客觀加減分</b>，±10 封頂；KD／RSI／乖離／布林已計入判讀分，不重複計）'
-      '%s</p>'
+    _tb, _ta, _tw, _sa, _sw = TADJ[c]
+    A('<p class="tnote fdet">技術面 %d 分 ＝ 判讀分 %d %s %d（<b>A 組客觀加減分</b>：'
+      'DMA 與 MACD 背離，±10 封頂）%s %d（<b>B 組策略訊號</b>：VWAP 攻防／20 日區間突破／'
+      '跳空缺口／移動停利／乖離 z-score，±5 封頂）。'
+      'A 組%s；B 組%s</p>'
       % (S[c][1], _tb, "＋" if _ta >= 0 else "−", abs(_ta),
-         ("：" + "、".join(_tw)) if _tw else "：本期無觸發項目"))
+         "＋" if _sa >= 0 else "−", abs(_sa),
+         ("：" + "、".join(_tw)) if _tw else "本期無觸發項目",
+         ("：" + "、".join(_sw)) if _sw else "本期無觸發項目"))
 
     # 11 建議｜兩種情境
     z = ZONE[c]
