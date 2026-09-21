@@ -62,8 +62,8 @@ def ops_text(code):
           % (f2(a["k_prev"]), f2(a["k"]), f2(a["d"]), f2(a["rsi"]), a["osc"],
              a["bias20"], z.get("z", 0), a["pb"],
              sum(1 for k in ("5", "10", "20", "60", "120", "240")
-                 if a["close"] >= a["ma"][k]),
-             "站上" if a["close"] >= a["vwap20"] else "跌破", pos,
+                 if a["close"] > a["ma"][k]),
+             "站上" if a["close"] > a["vwap20"] else "跌破", pos,
              f2(at["stop"]), "價格仍在其上" if at["above"] else "⚠ 已跌破"))
     return s1, s2, s3
 
