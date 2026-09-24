@@ -13,14 +13,14 @@ DESC_TMPL = "台股航運族群每日個股觀察報告 — {base_date} 收盤�
 REPO = r"C:\Users\user\Desktop\StockAnalysis-Ship"
 
 # ── 資料基準日（★ 每次跑報告都要改）──────────────────────────────
-BASE_DATE = "2026-09-21"          # 收盤日 YYYY-MM-DD
-BASE_WEEKDAY = "週一"              # 用於「（週四收盤）」字樣
+BASE_DATE = "2026-09-22"          # 收盤日 YYYY-MM-DD
+BASE_WEEKDAY = "週二"              # 用於「（週四收盤）」字樣
 YMD = BASE_DATE.replace("-", "")   # 資料夾名
 
 # 若為隔日補跑（資券已補齊），寫一句說明；否則設為 ""
 # 註：資券未公布的說明由 build_report.py 自動產生（會自動判斷並略過該區塊），
 #     這裡只寫「補跑」或其他特殊情況；平常留空字串。
-RERUN_NOTE = ""
+RERUN_NOTE = "本期為 2026-09-24 盤中補跟，資券與大戶皆已補齊。"
 
 # ── 報告資料夾保留期數（★ 守則第 12B 節，2026-08-27 定案）────────────
 # 只保留最新 N 個開盤日的報告資料夾；跑今日／昨日報告前先由 prune_reports.py

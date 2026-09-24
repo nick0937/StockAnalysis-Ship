@@ -19,7 +19,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
 sys.path.insert(0, os.path.join(BASE, "inputs"))
 import config as C
-from lib import (n, cm, sgn, cls, num_td, band_of, scls, total_score, market_score, tech_adj, strat_adj,
+from lib import (n, cm, sgn, cls, num_td, band_of, scls, total_score, market_score, tech_adj, strat_adj, final_five,
                  tech_anchor, TECH_ANCHOR_TOL, spark, mc, twrap, mabar, chip, opbox, MA_LABEL)
 import market as MK
 from scores import S, FUND, ADV
@@ -83,17 +83,15 @@ def div_cell(a):
 #    只提醒、不覆寫判讀分、不進報告 ──
 TADJ = {}
 for c in C.CODES:
-    rs = IND["stocks"][c]["rs"]
-    adj, why = tech_adj(IND["stocks"][c])           # A 組：MACD 背離＋DMA 交叉（±10）
-    sadj, swhy = strat_adj(IND["stocks"][c])        # B 組：八大策略訊號（±5，守則 §9.2）
+    # ★ 組法集中在 lib.final_five（A 組 tech_adj ±10 ＋ B 組 strat_adj ±5 ＋ 大盤面公式）
+    five, adj, why, sadj, swhy = final_five(S[c], IND["stocks"][c], MK.ENV_SCORE)
     TADJ[c] = (S[c][1], adj, why, sadj, swhy)
     lo, hi, ref = tech_anchor(IND["stocks"][c])
     if not (lo - TECH_ANCHOR_TOL <= S[c][1] <= hi + TECH_ANCHOR_TOL):
         print("   ⚠ %s 技術判讀分 %d 超出錨定區間 %d~%d 逾 ±%d（區間內參考落點 %d）"
               "→ 依守則 §9.0 複查，維持須在 scores.py 寫明理由"
               % (c, S[c][1], lo, hi, TECH_ANCHOR_TOL, ref))
-    S[c] = (S[c][0], max(0, min(100, S[c][1] + adj + sadj)), S[c][2],
-            market_score(MK.ENV_SCORE, rs), S[c][4])
+    S[c] = five
 TOT = {c: total_score(S[c]) for c in C.CODES}
 RANK = sorted(C.CODES, key=lambda c: -TOT[c])
 

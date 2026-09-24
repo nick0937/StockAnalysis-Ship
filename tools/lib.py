@@ -234,6 +234,26 @@ def strat_adj(a):
 TECH_ANCHOR_TOL = 5
 
 
+def final_five(hand, a, env_score):
+    """★ 五面向「最終分」的唯一組法（2026-09-24 集中；build_report／finalize／build_live 共用）。
+
+    hand = scores.py 的 (籌碼, 技術判讀分, 基本, 0, 消息)；a = indicators.json 的個股資料。
+    技術面 ＝ 判讀分 ＋ A 組 tech_adj（±10）＋ B 組 strat_adj（±5），再夾在 0~100；
+    大盤面 ＝ market_score(環境分, RS)。
+    回傳 (five, adj, why, sadj, swhy)。
+
+    ⚠ 這個公式過去分別寫在三支程式裡，已經三次只改一處而其他處沒跟上
+      （08-19 finalize 漏 A 組、08-27 build_live 漏 A 組、09-24 發現兩者都漏 B 組，
+      造成首頁「最高分」、COMMIT_MSG 排名與即時頁綜合分和日報不一致）。
+      之後要改組法只改這裡。
+    """
+    adj, why = tech_adj(a)
+    sadj, swhy = strat_adj(a)
+    five = (hand[0], max(0, min(100, hand[1] + adj + sadj)), hand[2],
+            market_score(env_score, a["rs"]), hand[4])
+    return five, adj, why, sadj, swhy
+
+
 def tech_anchor(a):
     """回傳 (lo, hi, ref)：守則 §9.0 的錨定區間與區間內參考落點。
 
