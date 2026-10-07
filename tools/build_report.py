@@ -76,8 +76,8 @@ def div_cell(a):
         return "無<br><small>近 60 根內未出現</small>"
     return "<br>".join(out)
 
-# ── 大盤面分一律由公式計算，覆寫 inputs 中的值（避免主觀給分）──
-# ── 技術面分 = inputs 判讀分 + DMA／MACD 背離的客觀加減分（lib.tech_adj，±10 封頂）──
+# ── 大盤面分一律由公式計算（＝大盤環境分；RS 只顯示不計分），覆寫 inputs 中的值（避免主觀給分）──
+# ── 技術面分 = inputs 判讀分 + A 組頂背離（lib.tech_adj，±10 封頂）+ B 組策略訊號（lib.strat_adj，±5 封頂）──
 # ── 另檢查判讀分是否落在錨定區間 ±TECH_ANCHOR_TOL 內（lib.tech_anchor，守則 §9.0）：
 #    超出印警告提醒複查（超出區間 ±5 依守則須在 scores.py 寫明理由），
 #    只提醒、不覆寫判讀分、不進報告 ──
@@ -411,8 +411,8 @@ for c in RANK:
                             for p, v in zip(C.FUND_PARTS, FUND[c]))))
     _tb, _ta, _tw, _sa, _sw = TADJ[c]
     A('<p class="tnote fdet">技術面 %d 分 ＝ 判讀分 %d %s %d（<b>A 組客觀加減分</b>：'
-      'DMA 與 MACD 背離，±10 封頂）%s %d（<b>B 組策略訊號</b>：VWAP 攻防／20 日區間突破／'
-      '跳空缺口／移動停利／乖離 z-score，±5 封頂）。'
+      'MACD 頂背離，±10 封頂）%s %d（<b>B 組策略訊號</b>：向上突破 20 日區間／向上跳空／'
+      '跌破 20 日 VWAP，±5 封頂）。'
       'A 組%s；B 組%s</p>'
       % (S[c][1], _tb, "＋" if _ta >= 0 else "−", abs(_ta),
          "＋" if _sa >= 0 else "−", abs(_sa),

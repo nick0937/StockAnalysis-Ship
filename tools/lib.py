@@ -66,8 +66,13 @@ def total_score(five):
 
 
 def market_score(env_score, rs):
-    """大盤面分 = 大盤環境分 × 50% + RS 分 × 50%（不主觀給分）"""
-    return half_up(env_score * .5 + rs * .5)
+    """大盤面分 = 大盤環境分（不主觀給分）。
+
+    2026-10-06 起 RS 不計分、只顯示（守則 §5、§9；與 StockAnalysis 同步）：一年回測 RS 對後續
+    超額報酬沒有預測力（StockAnalysis 9 檔 IC −0.03、本組合 10 檔 −0.06），且 RS（5／20／60 日
+    超額報酬）與技術面的均線排列是同一件事，計了就是把趨勢算兩次。保留 rs 參數只為呼叫端相容。
+    """
+    return half_up(env_score)
 
 
 # ── 技術面客觀加減分（2026-08-19 新增）────────────────────────────
@@ -77,10 +82,14 @@ def market_score(env_score, rs):
 #     因為位置等同於均線多頭／空頭排列，計了就是把趨勢算兩次
 #     （實測會讓最過熱的個股反而加分，方向錯誤）。
 #   - MACD 背離採分級衰減而非硬性截斷：轉折確認後訊號會鈍化但不會瞬間失效。
-DIV_ADJ = {"頂背離": -6.0, "底背離": 6.0, "隱性頂背離": -3.0, "隱性底背離": 3.0}
+#   - 2026-10-06 依一年回測精簡（與 StockAnalysis 同步；事件後 5 日相對同組超額報酬）：
+#     DMA 三組交叉、底背離、隱性背離在 StockAnalysis 9 檔與 Ship 10 檔都沒有訊號（全在 ±1% 內）→ 歸零；
+#     頂背離 StockAnalysis −1.25%、Ship 0.00%，暫維持 −6，2026-11 再驗證。
+#     權重為 0 的項目不計分、也不列入明細；指標格照常顯示 DMA 與背離。
+DIV_ADJ = {"頂背離": -6.0, "底背離": 0.0, "隱性頂背離": 0.0, "隱性底背離": 0.0}
 DIV_FULL_BARS = 10     # <= 此根數：全權
 DIV_HALF_BARS = 20     # <= 此根數：半權；超過則不計分
-DMA_CROSS_ADJ = 2.0    # 單組 DMA 當日交叉的加減分
+DMA_CROSS_ADJ = 0.0    # 單組 DMA 當日交叉的加減分（2026-10-06 起 0）
 TECH_ADJ_CAP = 10      # 合計封頂，避免單一機械訊號蓋過整體判讀
 
 
@@ -89,6 +98,7 @@ def tech_adj(a):
 
     MACD 背離：頂／底同時出現時自然相加抵銷（訊號互相衝突＝不給方向）。
     DMA 三組：只看當日是否交叉，每組 ±DMA_CROSS_ADJ。
+    權重為 0 的項目直接略過，不列入明細。
     """
     items, total = [], 0.0
     for side in ("top", "bottom"):
@@ -96,6 +106,8 @@ def tech_adj(a):
         if not h:
             continue
         base = DIV_ADJ.get(h["kind"], 0.0)
+        if not base:
+            continue
         b = h["bars_since"]
         if b <= DIV_FULL_BARS:
             v, tag = base, ""
@@ -107,7 +119,7 @@ def tech_adj(a):
         total += v
         items.append("%s %s%.1f%s" % (h["kind"], "＋" if v >= 0 else "−", abs(v),
                                       ("・" + tag) if tag else ""))
-    for key in ("3-6", "6-12", "5-20"):
+    for key in ("3-6", "6-12", "5-20") if DMA_CROSS_ADJ else ():
         d = (a.get("dma") or {}).get(key)
         if not d or d["cross"] == "無":
             continue
@@ -124,21 +136,35 @@ def tech_adj(a):
 
 
 
-# ── B 組客觀加減分：八大策略訊號（2026-09-15 新增，守則 §9.2）────────
+# ── B 組客觀加減分：八大策略訊號（2026-09-15 新增，守則 §9.2；2026-10-06 依回測精簡）──
 # ★ 與 A 組（tech_adj）嚴格分工，避免重複計分：
 #   A 組只管 MACD 背離與 DMA 當日交叉；B 組只管下列五類、A 組完全沒碰的事件。
 #   ⚠ 乖離率本身已在手評判讀分內，所以 B 組只在「z-score 超過 ±2」這個
 #     客觀極端門檻時才計分——計的是「極端」這件事，不是乖離本身。
+# ★ 2026-10-06 依本組合 10 檔一年回測精簡（2025-10~2026-10，2,340 筆，事件後 5 日相對同組超額報酬；
+#   與 StockAnalysis 9 檔的結論一致：向上事件會延續、向下事件沒有後續）：
+#   保留：帶量向上突破 +0.79%（隔日 +0.46%）、量不足向上突破 +2.40%（n=19）、向上跳空 +0.88%、
+#         跌破 20 日 VWAP −0.50%；
+#   歸零：站上 20 日 VWAP（隔日 −0.31%，t −2.1，方向相反）、向下跌破（帶量 −0.07%、量不足 +0.41%）、
+#         向下跳空 −0.12%、乖離 z>+2（+0.57%，方向相反）、z<−2（−0.01%）；
+#         「同時站上／跌破 20／60 日 VWAP」與移動停利線上下是持續狀態（位置型），本來就不該進加減分，
+#         實測也都在 ±0.1% 內。
+#   權重為 0 的項目不計分、也不列入明細。
 STRAT_ADJ_CAP = 5           # B 組合計封頂
-VWAP_CROSS_ADJ = 2.0        # 當日站上／跌破 20 日 VWAP
-VWAP_BOTH_ADJ = 1.0         # 同時站上／跌破 20 日與 60 日 VWAP 的額外分
-BRK_VOL_ADJ = 3.0           # 帶量突破／跌破 20 日區間
-BRK_NOVOL_ADJ = 1.0         # 突破但量能不足（假突破疑慮）
-GAP_OPEN_ADJ = 2.0          # 當日跳空且未回補
-GAP_FILL_ADJ = 1.0          # 缺口被回補
-TRAIL_ADJ = 2.0             # 收盤跌破吊燈式移動停利線
-TRAIL_RISE_ADJ = 1.0        # 停利線隨波段高點上移且價格仍在其上
-ZSCORE_ADJ = 2.0            # 乖離 z-score 超過 ±2（均值回歸門檻）
+VWAP_UP_ADJ = 0.0           # 當日站上 20 日 VWAP（2026-10-06 起 0）
+VWAP_DN_ADJ = 2.0           # 當日跌破 20 日 VWAP
+VWAP_BOTH_ADJ = 0.0         # 同時站上／跌破 20 日與 60 日 VWAP（位置型，2026-10-06 起 0）
+BRK_UP_VOL_ADJ = 3.0        # 帶量向上突破 20 日區間
+BRK_UP_NOVOL_ADJ = 1.0      # 向上突破但量能不足
+BRK_DN_VOL_ADJ = 0.0        # 帶量向下跌破（2026-10-06 起 0）
+BRK_DN_NOVOL_ADJ = 0.0      # 量能不足的向下跌破（2026-10-06 起 0）
+GAP_UP_ADJ = 2.0            # 當日向上跳空且未回補
+GAP_DN_ADJ = 0.0            # 當日向下跳空（2026-10-06 起 0）
+GAP_FILL_ADJ = 1.0          # 缺口被回補（目前未使用）
+TRAIL_ADJ = 0.0             # 收盤在吊燈式移動停利線下（位置型，2026-10-06 起 0）
+TRAIL_RISE_ADJ = 0.0        # 停利線上移且價格仍在其上（位置型，2026-10-06 起 0）
+ZSCORE_HOT_ADJ = 0.0        # 乖離 z-score > +2 的扣分（2026-10-06 起 0）
+ZSCORE_COLD_ADJ = 0.0       # 乖離 z-score < −2 的加分（2026-10-06 起 0）
 ZSCORE_TH = 2.0
 
 
@@ -148,6 +174,7 @@ def strat_adj(a):
     對應策略：1／5 VWAP 攻防、2 區間突破、7 缺口、8 移動停利、4 均值回歸。
     （3 短線剝頭皮屬盤中，只放即時建議頁，不進日報評分。
       6 支撐壓力拉回確認由條件盒的區間／錨點承擔，不另計分。）
+    權重為 0 的項目直接略過，不列入明細。
     """
     items, total = [], 0.0
     c = a.get("close")
@@ -158,13 +185,13 @@ def strat_adj(a):
         pc = a.get("prev_close")
         if pc:
             was, now = pc >= vwp, c >= vw
-            if now and not was:
-                total += VWAP_CROSS_ADJ
-                items.append("站上 20 日 VWAP %.2f ＋%.0f" % (vw, VWAP_CROSS_ADJ))
-            elif was and not now:
-                total -= VWAP_CROSS_ADJ
-                items.append("跌破 20 日 VWAP %.2f −%.0f" % (vw, VWAP_CROSS_ADJ))
-        if vw60:
+            if now and not was and VWAP_UP_ADJ:
+                total += VWAP_UP_ADJ
+                items.append("站上 20 日 VWAP %.2f ＋%.0f" % (vw, VWAP_UP_ADJ))
+            elif was and not now and VWAP_DN_ADJ:
+                total -= VWAP_DN_ADJ
+                items.append("跌破 20 日 VWAP %.2f −%.0f" % (vw, VWAP_DN_ADJ))
+        if vw60 and VWAP_BOTH_ADJ:
             if c >= vw and c >= vw60:
                 total += VWAP_BOTH_ADJ
                 items.append("同時站上 20／60 日 VWAP ＋%.0f" % VWAP_BOTH_ADJ)
@@ -175,31 +202,37 @@ def strat_adj(a):
     # 2：20 日區間突破 ----------------------------------------------
     b = a.get("breakout") or {}
     if b.get("dir") in ("向上突破", "向下跌破"):
-        v = BRK_VOL_ADJ if b.get("vol_ok") else BRK_NOVOL_ADJ
-        sign = 1 if b["dir"] == "向上突破" else -1
-        total += sign * v
-        items.append("%s 20 日區間 %.2f（量 %.2f 倍%s）%s%.0f"
-                     % (b["dir"], b.get("level", 0), b.get("vol_ratio") or 0,
-                        "、帶量" if b.get("vol_ok") else "、量能不足",
-                        "＋" if sign > 0 else "−", v))
+        up = b["dir"] == "向上突破"
+        if up:
+            v = BRK_UP_VOL_ADJ if b.get("vol_ok") else BRK_UP_NOVOL_ADJ
+        else:
+            v = BRK_DN_VOL_ADJ if b.get("vol_ok") else BRK_DN_NOVOL_ADJ
+        if v:
+            sign = 1 if up else -1
+            total += sign * v
+            items.append("%s 20 日區間 %.2f（量 %.2f 倍%s）%s%.0f"
+                         % (b["dir"], b.get("level", 0), b.get("vol_ratio") or 0,
+                            "、帶量" if b.get("vol_ok") else "、量能不足",
+                            "＋" if sign > 0 else "−", v))
 
     # 7：跳空缺口 ----------------------------------------------------
     g = a.get("gap") or {}
     t = g.get("today")
     if t:
-        sign = 1 if t["dir"] == "向上跳空" else -1
-        total += sign * GAP_OPEN_ADJ
-        items.append("%s %.2f~%.2f（%.2f%%）%s%.0f"
-                     % (t["dir"], t["lo"], t["hi"], t["pct"],
-                        "＋" if sign > 0 else "−", GAP_OPEN_ADJ))
+        up = t["dir"] == "向上跳空"
+        v = GAP_UP_ADJ if up else GAP_DN_ADJ
+        if v:
+            total += v if up else -v
+            items.append("%s %.2f~%.2f（%.2f%%）%s%.0f"
+                         % (t["dir"], t["lo"], t["hi"], t["pct"], "＋" if up else "−", v))
 
     # 8：吊燈式移動停利 ----------------------------------------------
     at = a.get("atr") or {}
     if at.get("stop"):
-        if not at.get("above"):
+        if not at.get("above") and TRAIL_ADJ:
             total -= TRAIL_ADJ
             items.append("收盤跌破移動停利線 %.2f −%.0f" % (at["stop"], TRAIL_ADJ))
-        elif at.get("rising"):
+        elif at.get("above") and at.get("rising") and TRAIL_RISE_ADJ:
             total += TRAIL_RISE_ADJ
             items.append("移動停利線上移到 %.2f 且價格仍在其上 ＋%.0f"
                          % (at["stop"], TRAIL_RISE_ADJ))
@@ -208,11 +241,13 @@ def strat_adj(a):
     z = a.get("bias_z") or {}
     zv = z.get("z")
     if zv is not None and abs(zv) > ZSCORE_TH:
-        sign = -1 if zv > 0 else 1        # 過度延伸扣分、過度超跌加分
-        total += sign * ZSCORE_ADJ
-        items.append("20 日乖離 z-score %+.2f（%s）%s%.0f"
-                     % (zv, "過度延伸" if zv > 0 else "過度超跌",
-                        "＋" if sign > 0 else "−", ZSCORE_ADJ))
+        v = ZSCORE_HOT_ADJ if zv > 0 else ZSCORE_COLD_ADJ
+        if v:
+            sign = -1 if zv > 0 else 1        # 過度延伸扣分、過度超跌加分
+            total += sign * v
+            items.append("20 日乖離 z-score %+.2f（%s）%s%.0f"
+                         % (zv, "過度延伸" if zv > 0 else "過度超跌",
+                            "＋" if sign > 0 else "−", v))
 
     adj = half_up(max(-STRAT_ADJ_CAP, min(STRAT_ADJ_CAP, total)))
     if abs(total) > STRAT_ADJ_CAP:
