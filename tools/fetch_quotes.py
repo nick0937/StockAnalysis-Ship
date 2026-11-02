@@ -100,6 +100,76 @@ def patch_index_gaps():
 
 patch_index_gaps()
 
+
+# ── ★ 補回 Yahoo 個股序列的缺洞（證交所 STOCK_DAY 官方收盤）────────────
+# 2026-11-03 踩到（MySelf 先發現，commit 27b5f10）：Yahoo 的 11/02 個股 K 棒有開高低量、
+# 收盤卻是 null，calc_indicators.py 會把該日丟掉，指標靜靜停在前一個交易日、表頭卻寫基準日。
+# 本 repo 那次是 00:03 抓的、Yahoo 已補上，10 檔與證交所官方收盤逐檔核對一致；這段是預防。
+# 只補收盤為 null 的列；開高低／成交量有值就沿用 Yahoo（STOCK_DAY 的股數口徑略大約 1%），null 才用官方值。
+# ⚠ STOCK_DAY 只有上市股；上櫃（.TWO）要用櫃買中心的端點，這裡只印警告不補。
+def patch_stock_gaps():
+    import datetime
+    seen = False
+    for c in C.CODES:
+        fp = os.path.join(OUT, C.SYM[c].replace("^", "IDX_") + ".json")
+        if not os.path.exists(fp):
+            continue
+        j = json.loads(open(fp, encoding="utf-8").read())
+        r = j["chart"]["result"][0]
+        q = r["indicators"]["quote"][0]
+        ts = r["timestamp"]
+        holes = {}
+        for n in range(max(0, len(ts) - 60), len(ts)):          # 只看近 60 筆
+            if q["close"][n] is None:
+                holes[datetime.datetime.fromtimestamp(ts[n]).strftime("%Y-%m-%d")] = n
+        if not holes:
+            continue
+        seen = True
+        if C.SYM[c].endswith(".TWO"):
+            print("   ★ %s 有 %d 個收盤缺漏日：%s——上櫃股不在 STOCK_DAY，請人工補"
+                  % (c, len(holes), "、".join(sorted(holes))))
+            continue
+        off = {}
+        for ym_ in sorted({d[:7].replace("-", "") + "01" for d in holes}):
+            try:
+                d = json.loads(get("https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY"
+                                   "?date=%s&stockNo=%s&response=json" % (ym_, c)))
+                for row in d.get("data", []):
+                    roc = row[0].split("/")
+                    ad = "%d-%s-%s" % (int(roc[0]) + 1911, roc[1], roc[2])
+                    try:
+                        off[ad] = [float(x.replace(",", "")) for x in (row[3], row[4], row[5], row[6], row[1])]
+                    except ValueError:                   # 當日無成交，價格欄是 "--"
+                        continue
+                time.sleep(1.5)
+            except Exception as e:
+                print("   STOCK_DAY %s %s FAIL：%s" % (c, ym_, e))
+        fixed, missed = [], []
+        for d, n in sorted(holes.items()):
+            if d in off:
+                o, h, l, cl, v = off[d]
+                q["close"][n] = cl
+                for k, val in (("open", o), ("high", h), ("low", l), ("volume", int(v))):
+                    if q[k][n] is None:
+                        q[k][n] = val
+                for a in (r["indicators"].get("adjclose") or []):
+                    if isinstance(a.get("adjclose"), list) and a["adjclose"][n] is None:
+                        a["adjclose"][n] = cl
+                fixed.append("%s 收 %.2f" % (d, cl))
+            else:
+                missed.append(d)
+        if fixed:
+            open(fp, "w", encoding="utf-8").write(json.dumps(j, ensure_ascii=False))
+            print("   %s 已補：%s" % (c, "、".join(fixed)))
+        if missed:
+            print("   ★ %s 仍缺（證交所也查無，可能是盤中未完成的 K 棒或休市日）：%s" % (c, "、".join(missed)))
+    if not seen:
+        print("   無缺漏日")
+
+
+print("\n個股序列收盤缺漏檢查（近 60 筆）")
+patch_stock_gaps()
+
 # ── 大盤成交金額與股數（證交所 FMTQIK，官方、有整月歷史）──
 ym = C.BASE_DATE[:7].replace("-", "") + "01"
 try:
